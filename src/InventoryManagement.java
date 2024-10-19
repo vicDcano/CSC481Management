@@ -18,7 +18,7 @@ import java.sql.Statement;
 public class InventoryManagement {
     static final String DB_URL = "jdbc:mysql://localhost:3306/";
     static final String USER = "root";  
-    static final String PASS = " "; //plug in your pw
+    static final String PASS = "1234567"; //plug in your pw
 
     public static void main(String[] args) {
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
@@ -79,7 +79,8 @@ public class InventoryManagement {
         }
     }
 
-    private static void createAndShowGUI(Connection dbConn) {
+    private static void createAndShowGUI(Connection dbConn)
+    {
         JFrame frame = new JFrame("Inventory Management");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(800, 600);
@@ -158,6 +159,82 @@ public class InventoryManagement {
 
         // frame visibility
         frame.setVisible(true);
+
+        // Canceled Orders Tab
+        JPanel canceledPanel = new JPanel(new BorderLayout());
+
+        JTable canceledTable = new JTable();
+        JScrollPane cancelScrollPane = new JScrollPane(canceledTable);
+        canceledPanel.add(cancelScrollPane, BorderLayout.CENTER);
+
+        JButton refreshCancelButton = new JButton("Refresh Orders");
+        refreshCancelButton.addActionListener(e -> {
+            try {
+                loadCanceledOrdersData(dbConn, canceledTable);
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        // panel for buttons
+        JPanel cancelButtonPanel = new JPanel();
+        cancelButtonPanel.add(refreshCancelButton);
+
+        canceledPanel.add(cancelButtonPanel, BorderLayout.SOUTH);
+
+        // load initial canceled orders data
+        try {
+            loadCanceledOrdersData(dbConn, ordersTable);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        // add orders management panel to tab
+        tabbedPane.addTab("Canceled Orders", canceledPanel);
+
+        // Add tabbed pane to frame
+        frame.add(tabbedPane);
+
+        // frame visibility
+        frame.setVisible(true);
+
+        // Completed Orders Tab
+        JPanel completePanel = new JPanel(new BorderLayout());
+
+        JTable completeTable = new JTable();
+        JScrollPane completeScrollPane = new JScrollPane(completeTable);
+        completePanel .add(completeScrollPane, BorderLayout.CENTER);
+
+        JButton refreshCompleteButton = new JButton("Refresh Orders");
+        refreshCompleteButton.addActionListener(e -> {
+            try {
+                loadCompletedOrdersData(dbConn, completeTable);
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        // panel for buttons
+        JPanel completeButtonPanel = new JPanel();
+        completeButtonPanel.add(refreshCompleteButton);
+
+        completePanel .add(completeButtonPanel, BorderLayout.SOUTH);
+
+        // load initial completed orders data
+        try {
+            loadCompletedOrdersData(dbConn, ordersTable);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        // add orders management panel to tab
+        tabbedPane.addTab("Completed Orders", completePanel);
+
+        // Add tabbed pane to frame
+        frame.add(tabbedPane);
+
+        // frame visibility
+        frame.setVisible(true);
     }
 
     private static void loadInventoryData(Connection dbConn, JTable table) throws SQLException {
@@ -184,6 +261,50 @@ public class InventoryManagement {
     }
 
     private static void loadPendingOrdersData(Connection dbConn, JTable table) throws SQLException {
+        String selectSQL = "SELECT order_id, item_name, quantity, status FROM PendingOrders";
+        ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
+
+        // extract data from result set
+        String[] columnNames = {"Order ID", "Item Name", "Quantity", "Status"};
+        DefaultTableModel model = new DefaultTableModel(columnNames, 0);
+
+        while (rs.next()) {
+            int orderId = rs.getInt("order_id");
+            String itemName = rs.getString("item_name");
+            int quantity = rs.getInt("quantity");
+            String status = rs.getString("status");
+            Object[] row = {orderId, itemName, quantity, status};
+            model.addRow(row);
+        }
+
+        // set model to table
+        table.setModel(model);
+    }
+
+    private static void loadCompletedOrdersData(Connection dbConn, JTable table) throws SQLException
+    {
+        String selectSQL = "SELECT order_id, item_name, quantity, status FROM PendingOrders";
+        ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
+
+        // extract data from result set
+        String[] columnNames = {"Order ID", "Item Name", "Quantity", "Status"};
+        DefaultTableModel model = new DefaultTableModel(columnNames, 0);
+
+        while (rs.next()) {
+            int orderId = rs.getInt("order_id");
+            String itemName = rs.getString("item_name");
+            int quantity = rs.getInt("quantity");
+            String status = rs.getString("status");
+            Object[] row = {orderId, itemName, quantity, status};
+            model.addRow(row);
+        }
+
+        // set model to table
+        table.setModel(model);
+    }
+
+    private static void loadCanceledOrdersData(Connection dbConn, JTable table) throws SQLException
+    {
         String selectSQL = "SELECT order_id, item_name, quantity, status FROM PendingOrders";
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
