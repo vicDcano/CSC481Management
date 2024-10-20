@@ -45,9 +45,12 @@ public class InventoryManagement {
             // create pending orders table
             String createPendingOrdersSQL = "CREATE TABLE IF NOT EXISTS PendingOrders "
                     + "(order_id INT NOT NULL AUTO_INCREMENT, "
-                    + " item_name VARCHAR(255), "
+                    + " first_name VARCHAR(45), "
+                    + " last_name VARCHAR(45), "
+                    + " item_name VARCHAR(45), "
                     + " quantity INT, "
-                    + " status VARCHAR(255) DEFAULT 'Pending', "
+                    + " price DECIMAL(10, 2), "
+                    + " status VARCHAR(45) DEFAULT 'Pending', "
                     + " PRIMARY KEY (order_id))";
             dbConn.createStatement().executeUpdate(createPendingOrdersSQL);
             System.out.println("PendingOrders table created successfully...");
@@ -264,11 +267,11 @@ public class InventoryManagement {
     }
 
     private static void loadPendingOrdersData(Connection dbConn, JTable table) throws SQLException {
-        String selectSQL = "SELECT order_id, first_name, last_name, item_name, quantity, status FROM PendingOrders";
+        String selectSQL = "SELECT order_id, first_name, last_name, item_name, quantity, price, status FROM PendingOrders";
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
         // extract data from result set
-        String[] columnNames = {"Order ID", "First Name", "Last Name", "Item Name", "Quantity", "Status"};
+        String[] columnNames = {"Order ID", "First Name", "Last Name", "Item Name", "Quantity", "Price", "Status"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
         while (rs.next()) {
@@ -277,8 +280,10 @@ public class InventoryManagement {
             String lastName = rs.getString("last_name");
             String itemName = rs.getString("item_name");
             int quantity = rs.getInt("quantity");
+            double price = rs.getDouble("price");
+            String formattedPrice = String.format("$%.2f", price);
             String status = rs.getString("status");
-            Object[] row = {orderId, itemName, quantity, status};
+            Object[] row = {orderId,firstName, lastName, itemName, quantity, formattedPrice, status};
             model.addRow(row);
         }
 
@@ -287,11 +292,11 @@ public class InventoryManagement {
     }
 
     private static void loadCanceledOrdersData(Connection dbConn, JTable table) throws SQLException {
-        String selectSQL = "SELECT order_id, first_name, last_name, item_name, quantity, status FROM PendingOrders WHERE status = 'Canceled'";
+        String selectSQL = "SELECT order_id, first_name, last_name, item_name, quantity, price, status FROM CanceledOrders";
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
         // extract data from result set
-        String[] columnNames = {"Order ID", "First Name", "Last Name", "Item Name", "Quantity", "Status"};
+        String[] columnNames = {"Order ID", "First Name", "Last Name", "Item Name", "Quantity", "Price", "Status"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
         while (rs.next()) {
@@ -300,8 +305,10 @@ public class InventoryManagement {
             String lastName = rs.getString("last_name");
             String itemName = rs.getString("item_name");
             int quantity = rs.getInt("quantity");
+            double price = rs.getDouble("price");
+            String formattedPrice = String.format("$%.2f", price);
             String status = rs.getString("status");
-            Object[] row = {orderId, itemName, quantity, status};
+            Object[] row = {orderId, firstName, lastName, itemName, quantity, formattedPrice, status};
             model.addRow(row);
         }
 
@@ -310,11 +317,11 @@ public class InventoryManagement {
     }
 
     private static void loadCompletedOrdersData(Connection dbConn, JTable table) throws SQLException {
-        String selectSQL = "SELECT order_id, first_name, last_name, item_name, quantity, status FROM PendingOrders WHERE status = 'Completed'";
+        String selectSQL = "SELECT order_id, first_name, last_name, item_name, quantity, price, status FROM CompletedOrders";
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
         // extract data from result set
-        String[] columnNames = {"Order ID", "First Name", "Last Name", "Item Name", "Quantity", "Status"};
+        String[] columnNames = {"Order ID", "First Name", "Last Name", "Item Name", "Quantity", "Price", "Status"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
         while (rs.next()) {
@@ -323,8 +330,10 @@ public class InventoryManagement {
             String lastName = rs.getString("last_name");
             String itemName = rs.getString("item_name");
             int quantity = rs.getInt("quantity");
+            double price = rs.getDouble("price");
+            String formattedPrice = String.format("$%.2f", price);
             String status = rs.getString("status");
-            Object[] row = {orderId, itemName, quantity, status};
+            Object[] row = {orderId, firstName, lastName, itemName, quantity, formattedPrice, status};
             model.addRow(row);
         }
 
