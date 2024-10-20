@@ -18,7 +18,7 @@ import java.sql.Statement;
 public class InventoryManagement {
     static final String DB_URL = "jdbc:mysql://localhost:3306/";
     static final String USER = "root";  
-    static final String PASS = "1234567"; // plug in your password
+    static final String PASS = "1234"; // plug in your password
 
     public static void main(String[] args) {
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
@@ -264,15 +264,17 @@ public class InventoryManagement {
     }
 
     private static void loadPendingOrdersData(Connection dbConn, JTable table) throws SQLException {
-        String selectSQL = "SELECT order_id, item_name, quantity, status FROM PendingOrders";
+        String selectSQL = "SELECT order_id, first_name, last_name, item_name, quantity, status FROM PendingOrders";
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
         // extract data from result set
-        String[] columnNames = {"Order ID", "Item Name", "Quantity", "Status"};
+        String[] columnNames = {"Order ID", "First Name", "Last Name", "Item Name", "Quantity", "Status"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
         while (rs.next()) {
             int orderId = rs.getInt("order_id");
+            String firstName = rs.getString("first_name");
+            String lastName = rs.getString("last_name");
             String itemName = rs.getString("item_name");
             int quantity = rs.getInt("quantity");
             String status = rs.getString("status");
@@ -285,15 +287,17 @@ public class InventoryManagement {
     }
 
     private static void loadCanceledOrdersData(Connection dbConn, JTable table) throws SQLException {
-        String selectSQL = "SELECT order_id, item_name, quantity, status FROM PendingOrders WHERE status = 'Canceled'";
+        String selectSQL = "SELECT order_id, first_name, last_name, item_name, quantity, status FROM PendingOrders WHERE status = 'Canceled'";
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
         // extract data from result set
-        String[] columnNames = {"Order ID", "Item Name", "Quantity", "Status"};
+        String[] columnNames = {"Order ID", "First Name", "Last Name", "Item Name", "Quantity", "Status"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
         while (rs.next()) {
             int orderId = rs.getInt("order_id");
+            String firstName = rs.getString("first_name");
+            String lastName = rs.getString("last_name");
             String itemName = rs.getString("item_name");
             int quantity = rs.getInt("quantity");
             String status = rs.getString("status");
@@ -306,15 +310,17 @@ public class InventoryManagement {
     }
 
     private static void loadCompletedOrdersData(Connection dbConn, JTable table) throws SQLException {
-        String selectSQL = "SELECT order_id, item_name, quantity, status FROM PendingOrders WHERE status = 'Completed'";
+        String selectSQL = "SELECT order_id, first_name, last_name, item_name, quantity, status FROM PendingOrders WHERE status = 'Completed'";
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
         // extract data from result set
-        String[] columnNames = {"Order ID", "Item Name", "Quantity", "Status"};
+        String[] columnNames = {"Order ID", "First Name", "Last Name", "Item Name", "Quantity", "Status"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
         while (rs.next()) {
             int orderId = rs.getInt("order_id");
+            String firstName = rs.getString("first_name");
+            String lastName = rs.getString("last_name");
             String itemName = rs.getString("item_name");
             int quantity = rs.getInt("quantity");
             String status = rs.getString("status");
