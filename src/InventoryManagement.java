@@ -4,8 +4,11 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
+import javax.swing.JComboBox;
+import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
+import java.sql.PreparedStatement;
 
 import java.awt.BorderLayout;
 
@@ -18,7 +21,7 @@ import java.sql.Statement;
 public class InventoryManagement {
     static final String DB_URL = "jdbc:mysql://localhost:3306/";
     static final String USER = "root";  
-    static final String PASS = "1234"; // plug in your password
+    static final String PASS = "1234567"; // plug in your password
 
     public static void main(String[] args) {
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
@@ -96,6 +99,26 @@ public class InventoryManagement {
         JTable table = new JTable();
         JScrollPane scrollPane = new JScrollPane(table);
         inventoryPanel.add(scrollPane, BorderLayout.CENTER);
+
+        JPanel searchPanel = new JPanel();
+        String[] searchOptions = {"Item Name", "Category"};  // Dropdown options
+        JComboBox<String> searchDropdown = new JComboBox<>(searchOptions);  // Dropdown for search criteria
+        JTextField searchTextField = new JTextField(15);  // Text field for search input
+        JButton searchButton = new JButton("Search");
+
+        searchButton.addActionListener(e -> {
+            try {
+                searchBarInventory(dbConn, table, searchDropdown.getSelectedItem().toString(), searchTextField.getText());
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        // Add components to search panel
+        searchPanel.add(searchDropdown);
+        searchPanel.add(searchTextField);
+        searchPanel.add(searchButton);
+        inventoryPanel.add(searchPanel, BorderLayout.NORTH);
 
         JButton refreshButton = new JButton("Refresh Inventory");
         refreshButton.addActionListener(e -> {
@@ -291,7 +314,8 @@ public class InventoryManagement {
         table.setModel(model);
     }
 
-    private static void loadCanceledOrdersData(Connection dbConn, JTable table) throws SQLException {
+    private static void loadCanceledOrdersData(Connection dbConn, JTable table) throws SQLException
+    {
         String selectSQL = "SELECT order_id, first_name, last_name, item_name, quantity, price, status FROM CanceledOrders";
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
@@ -316,7 +340,8 @@ public class InventoryManagement {
         table.setModel(model);
     }
 
-    private static void loadCompletedOrdersData(Connection dbConn, JTable table) throws SQLException {
+    private static void loadCompletedOrdersData(Connection dbConn, JTable table) throws SQLException
+    {
         String selectSQL = "SELECT order_id, first_name, last_name, item_name, quantity, price, status FROM CompletedOrders";
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
@@ -339,5 +364,44 @@ public class InventoryManagement {
 
         // set model to table
         table.setModel(model);
+    }
+
+    private static void searchBarInventory(Connection dbConn, JTable table, String searchCriterion, String searchInput) throws SQLException
+    {
+        String searchColumn = "item_name";  // Default search by item name
+
+        // Map the search criterion to the correct column
+        if (searchCriterion.equals("Category")) {
+            searchColumn = "category";
+        }
+
+        // SQL query with parameterized search
+        String searchSQL = "SELECT id, item_name, category, quantity, price FROM Inventory WHERE " + searchColumn + " LIKE ?";
+        try (PreparedStatement pstmt = dbConn.prepareStatement(searchSQL)) {
+            pstmt.setString(1, "%" + searchInput + "%");  // Use wildcards for partial matches
+            ResultSet rs = pstmt.executeQuery();
+
+            // Extract data and update the table model
+            String[] columnNames = {"ID", "Item Name", "Category", "Quantity", "Price"};
+            DefaultTableModel model = new DefaultTableModel(columnNames, 0);
+
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String itemName = rs.getString("item_name");
+                String category = rs.getString("category");
+                int quantity = rs.getInt("quantity");
+                double price = rs.getDouble("price");
+                String formattedPrice = String.format("$%.2f", price);
+                Object[] row = {id, itemName, category, quantity, formattedPrice};
+                model.addRow(row);
+            }
+
+            table.setModel(model);  // Update table with search results
+        }
+    }
+
+    private static void searchBarCustomerOrder(Connection dbConn, JTable table) throws SQLException
+    {
+
     }
 }
