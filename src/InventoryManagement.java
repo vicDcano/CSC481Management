@@ -27,8 +27,7 @@ public class InventoryManagement {
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
              Statement stmt = conn.createStatement()) {
 
-            // create db
-            
+            // create database
             String sql = "CREATE DATABASE IF NOT EXISTS mydatabase";
             stmt.executeUpdate(sql);
             System.out.println("Database created successfully...");
