@@ -9,8 +9,9 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
 import java.sql.PreparedStatement;
+
 import java.awt.BorderLayout;
-import java.awt.GridLayout;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -19,21 +20,21 @@ import java.sql.Statement;
 
 public class InventoryManagement {
     static final String DB_URL = "jdbc:mysql://localhost:3306/";
-    static final String USER = "root";
-    static final String PASS = "481jfortin1";
+    static final String USER = "root";  
+    static final String PASS = "1234567"; // plug in your password
 
     public static void main(String[] args) {
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
              Statement stmt = conn.createStatement()) {
 
-            // Create database
+            // create database
             String sql = "CREATE DATABASE IF NOT EXISTS mydatabase";
             stmt.executeUpdate(sql);
             System.out.println("Database created successfully...");
 
             Connection dbConn = DriverManager.getConnection(DB_URL + "mydatabase", USER, PASS);
 
-            // Create inventory table
+            // create inventory table
             String createTableSQL = "CREATE TABLE IF NOT EXISTS Inventory "
                     + "(id INT NOT NULL AUTO_INCREMENT, "
                     + " item_name VARCHAR(255), "
@@ -44,7 +45,7 @@ public class InventoryManagement {
             dbConn.createStatement().executeUpdate(createTableSQL);
             System.out.println("Inventory table created successfully...");
 
-            // Create pending orders table
+            // create pending orders table
             String createPendingOrdersSQL = "CREATE TABLE IF NOT EXISTS PendingOrders "
                     + "(order_id INT NOT NULL AUTO_INCREMENT, "
                     + " first_name VARCHAR(45), "
@@ -57,7 +58,26 @@ public class InventoryManagement {
             dbConn.createStatement().executeUpdate(createPendingOrdersSQL);
             System.out.println("PendingOrders table created successfully...");
 
-            // GUI setup
+            // insert initial data if the table is empty
+            String checkTableSQL = "SELECT COUNT(*) AS rowcount FROM Inventory";
+            ResultSet rsCheck = dbConn.createStatement().executeQuery(checkTableSQL);
+            rsCheck.next();
+            int count = rsCheck.getInt("rowcount");
+            if (count == 0) {
+                String insertSQL = "INSERT INTO Inventory (item_name, category, quantity, price) VALUES "
+                        + "('computers', 'Electronics', 10, 1000.00), "
+                        + "('iPads', 'Electronics', 15, 800.00), "
+                        + "('monitors', 'Electronics', 20, 150.00), "
+                        + "('laptops', 'Electronics', 8, 1200.00), "
+                        + "('keyboards', 'Accessories', 30, 20.00), "
+                        + "('mice', 'Accessories', 40, 15.00)";
+                dbConn.createStatement().executeUpdate(insertSQL);
+                System.out.println("Initial data inserted successfully...");
+            } else {
+                System.out.println("Data already exists, skipping initial insertion...");
+            }
+
+            // GUI
             SwingUtilities.invokeLater(() -> createAndShowGUI(dbConn));
 
         } catch (SQLException e) {
@@ -70,18 +90,20 @@ public class InventoryManagement {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(800, 600);
 
+        // create a tabbed pane
         JTabbedPane tabbedPane = new JTabbedPane();
 
-        // Inventory Management Tab
+        // inventory Management Tab
         JPanel inventoryPanel = new JPanel(new BorderLayout());
+
         JTable table = new JTable();
         JScrollPane scrollPane = new JScrollPane(table);
         inventoryPanel.add(scrollPane, BorderLayout.CENTER);
 
         JPanel searchPanel = new JPanel();
-        String[] searchOptions = {"Item Name", "Category"};
-        JComboBox<String> searchDropdown = new JComboBox<>(searchOptions);
-        JTextField searchTextField = new JTextField(15);
+        String[] searchOptions = {"Item Name", "Category"};  // Dropdown options
+        JComboBox<String> searchDropdown = new JComboBox<>(searchOptions);  // Dropdown for search criteria
+        JTextField searchTextField = new JTextField(15);  // Text field for search input
         JButton searchButton = new JButton("Search");
 
         searchButton.addActionListener(e -> {
@@ -92,6 +114,7 @@ public class InventoryManagement {
             }
         });
 
+        // Add components to search panel
         searchPanel.add(searchDropdown);
         searchPanel.add(searchTextField);
         searchPanel.add(searchButton);
@@ -118,8 +141,9 @@ public class InventoryManagement {
 
         tabbedPane.addTab("Inventory", inventoryPanel);
 
-        // Pending Orders Tab
+        // pending Orders Tab
         JPanel ordersPanel = new JPanel(new BorderLayout());
+
         JTable ordersTable = new JTable();
         JScrollPane ordersScrollPane = new JScrollPane(ordersTable);
         ordersPanel.add(ordersScrollPane, BorderLayout.CENTER);
@@ -133,13 +157,20 @@ public class InventoryManagement {
             }
         });
 
-        // Add Order Button to open the Add Order form
-        JButton addOrderButton = new JButton("Add Order");
-        addOrderButton.addActionListener(e -> openAddOrderTab(dbConn, tabbedPane, ordersTable));
+        JButton generateOrderButton = new JButton("Generate Order");
+        generateOrderButton.addActionListener(e -> {
+            try {
+                generateRandomOrder(dbConn);
+                loadPendingOrdersData(dbConn, ordersTable);
+                loadInventoryData(dbConn, table);  // refresh the inventory after order generation
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        });
 
         JPanel ordersButtonPanel = new JPanel();
         ordersButtonPanel.add(refreshOrdersButton);
-        ordersButtonPanel.add(addOrderButton);
+        ordersButtonPanel.add(generateOrderButton);
         ordersPanel.add(ordersButtonPanel, BorderLayout.SOUTH);
 
         try {
@@ -150,8 +181,9 @@ public class InventoryManagement {
 
         tabbedPane.addTab("Pending Orders", ordersPanel);
 
-        // Canceled Orders Tab
+        // canceled Orders Tab
         JPanel canceledPanel = new JPanel(new BorderLayout());
+
         JTable canceledTable = new JTable();
         JScrollPane canceledScrollPane = new JScrollPane(canceledTable);
         canceledPanel.add(canceledScrollPane, BorderLayout.CENTER);
@@ -177,8 +209,9 @@ public class InventoryManagement {
 
         tabbedPane.addTab("Canceled Orders", canceledPanel);
 
-        // Completed Orders Tab
+        // completed Orders Tab
         JPanel completedPanel = new JPanel(new BorderLayout());
+
         JTable completedTable = new JTable();
         JScrollPane completedScrollPane = new JScrollPane(completedTable);
         completedPanel.add(completedScrollPane, BorderLayout.CENTER);
@@ -204,62 +237,32 @@ public class InventoryManagement {
 
         tabbedPane.addTab("Completed Orders", completedPanel);
 
+        // add tabbed pane to frame
         frame.add(tabbedPane);
+
+        // display frame
         frame.setVisible(true);
     }
 
-    private static void openAddOrderTab(Connection dbConn, JTabbedPane tabbedPane, JTable ordersTable) {
-        JPanel addOrderPanel = new JPanel(new GridLayout(6, 2, 5, 5));
+    private static void generateRandomOrder(Connection dbConn) throws SQLException {
+        // select a random item from the inventory where quantity > 0
+        String selectSQL = "SELECT id, item_name, quantity FROM Inventory WHERE quantity > 0 ORDER BY RAND() LIMIT 1";
+        ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
-        JTextField firstNameField = new JTextField();
-        JTextField lastNameField = new JTextField();
-        JTextField itemNameField = new JTextField();
-        JTextField quantityField = new JTextField();
-        JTextField priceField = new JTextField();
+        if (rs.next()) {
+            int itemId = rs.getInt("id");
+            String itemName = rs.getString("item_name");
+            // reduce the quantity by 1
+            String updateSQL = "UPDATE Inventory SET quantity = quantity - 1 WHERE id = " + itemId;
+            dbConn.createStatement().executeUpdate(updateSQL);
 
-        addOrderPanel.add(new javax.swing.JLabel("First Name:"));
-        addOrderPanel.add(firstNameField);
-        addOrderPanel.add(new javax.swing.JLabel("Last Name:"));
-        addOrderPanel.add(lastNameField);
-        addOrderPanel.add(new javax.swing.JLabel("Item Name:"));
-        addOrderPanel.add(itemNameField);
-        addOrderPanel.add(new javax.swing.JLabel("Quantity:"));
-        addOrderPanel.add(quantityField);
-        addOrderPanel.add(new javax.swing.JLabel("Price:"));
-        addOrderPanel.add(priceField);
+            // insert the generated order into PendingOrders
+            String insertOrderSQL = "INSERT INTO PendingOrders (item_name, quantity) VALUES ('" + itemName + "', 1)";
+            dbConn.createStatement().executeUpdate(insertOrderSQL);
 
-        JButton submitOrderButton = new JButton("Submit Order");
-        submitOrderButton.addActionListener(e -> {
-            String firstName = firstNameField.getText();
-            String lastName = lastNameField.getText();
-            String itemName = itemNameField.getText();
-            int quantity = Integer.parseInt(quantityField.getText());
-            double price = Double.parseDouble(priceField.getText());
-
-            try {
-                addOrderToDatabase(dbConn, firstName, lastName, itemName, quantity, price);
-                loadPendingOrdersData(dbConn, ordersTable);
-                tabbedPane.setSelectedIndex(tabbedPane.indexOfTab("Pending Orders"));
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
-        });
-
-        addOrderPanel.add(submitOrderButton);
-        tabbedPane.addTab("Add Order", addOrderPanel);
-        tabbedPane.setSelectedComponent(addOrderPanel);
-    }
-
-    private static void addOrderToDatabase(Connection dbConn, String firstName, String lastName, String itemName, int quantity, double price) throws SQLException {
-        String insertSQL = "INSERT INTO PendingOrders (first_name, last_name, item_name, quantity, price) VALUES (?, ?, ?, ?, ?)";
-        try (PreparedStatement pstmt = dbConn.prepareStatement(insertSQL)) {
-            pstmt.setString(1, firstName);
-            pstmt.setString(2, lastName);
-            pstmt.setString(3, itemName);
-            pstmt.setInt(4, quantity);
-            pstmt.setDouble(5, price);
-            pstmt.executeUpdate();
-            System.out.println("Order added successfully.");
+            System.out.println("Order for " + itemName + " has been generated.");
+        } else {
+            System.out.println("No items available in inventory to generate an order.");
         }
     }
 
@@ -267,6 +270,7 @@ public class InventoryManagement {
         String selectSQL = "SELECT id, item_name, category, quantity, price FROM Inventory";
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
+        // extract data from result set
         String[] columnNames = {"ID", "Item Name", "Category", "Quantity", "Price"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
@@ -281,6 +285,7 @@ public class InventoryManagement {
             model.addRow(row);
         }
 
+        // set model to table
         table.setModel(model);
     }
 
@@ -288,6 +293,7 @@ public class InventoryManagement {
         String selectSQL = "SELECT order_id, first_name, last_name, item_name, quantity, price, status FROM PendingOrders";
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
+        // extract data from result set
         String[] columnNames = {"Order ID", "First Name", "Last Name", "Item Name", "Quantity", "Price", "Status"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
@@ -300,17 +306,20 @@ public class InventoryManagement {
             double price = rs.getDouble("price");
             String formattedPrice = String.format("$%.2f", price);
             String status = rs.getString("status");
-            Object[] row = {orderId, firstName, lastName, itemName, quantity, formattedPrice, status};
+            Object[] row = {orderId,firstName, lastName, itemName, quantity, formattedPrice, status};
             model.addRow(row);
         }
 
+        // set model to table
         table.setModel(model);
     }
 
-    private static void loadCanceledOrdersData(Connection dbConn, JTable table) throws SQLException {
+    private static void loadCanceledOrdersData(Connection dbConn, JTable table) throws SQLException
+    {
         String selectSQL = "SELECT order_id, first_name, last_name, item_name, quantity, price, status FROM CanceledOrders";
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
+        // extract data from result set
         String[] columnNames = {"Order ID", "First Name", "Last Name", "Item Name", "Quantity", "Price", "Status"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
@@ -327,13 +336,16 @@ public class InventoryManagement {
             model.addRow(row);
         }
 
+        // set model to table
         table.setModel(model);
     }
 
-    private static void loadCompletedOrdersData(Connection dbConn, JTable table) throws SQLException {
+    private static void loadCompletedOrdersData(Connection dbConn, JTable table) throws SQLException
+    {
         String selectSQL = "SELECT order_id, first_name, last_name, item_name, quantity, price, status FROM CompletedOrders";
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
+        // extract data from result set
         String[] columnNames = {"Order ID", "First Name", "Last Name", "Item Name", "Quantity", "Price", "Status"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
@@ -350,16 +362,26 @@ public class InventoryManagement {
             model.addRow(row);
         }
 
+        // set model to table
         table.setModel(model);
     }
 
-    private static void searchBarInventory(Connection dbConn, JTable table, String searchCriterion, String searchInput) throws SQLException {
-        String searchColumn = searchCriterion.equals("Category") ? "category" : "item_name";
+    private static void searchBarInventory(Connection dbConn, JTable table, String searchCriterion, String searchInput) throws SQLException
+    {
+        String searchColumn = "item_name";  // Default search by item name
+
+        // Map the search criterion to the correct column
+        if (searchCriterion.equals("Category")) {
+            searchColumn = "category";
+        }
+
+        // SQL query with parameterized search
         String searchSQL = "SELECT id, item_name, category, quantity, price FROM Inventory WHERE " + searchColumn + " LIKE ?";
         try (PreparedStatement pstmt = dbConn.prepareStatement(searchSQL)) {
-            pstmt.setString(1, "%" + searchInput + "%");
+            pstmt.setString(1, "%" + searchInput + "%");  // Use wildcards for partial matches
             ResultSet rs = pstmt.executeQuery();
 
+            // Extract data and update the table model
             String[] columnNames = {"ID", "Item Name", "Category", "Quantity", "Price"};
             DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
@@ -374,7 +396,12 @@ public class InventoryManagement {
                 model.addRow(row);
             }
 
-            table.setModel(model);
+            table.setModel(model);  // Update table with search results
         }
+    }
+
+    private static void searchBarCustomerOrder(Connection dbConn, JTable table) throws SQLException
+    {
+
     }
 }
