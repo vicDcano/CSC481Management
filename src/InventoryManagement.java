@@ -21,9 +21,10 @@ import java.sql.Statement;
 public class InventoryManagement {
     static final String DB_URL = "jdbc:mysql://localhost:3306/";
     static final String USER = "root";  
-    static final String PASS = "1234567"; // plug in your password
+    static final String PASS = "1234"; // plug in your password
 
-    public static void main(String[] args) {
+    public static void main(String[] args)
+    {
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
              Statement stmt = conn.createStatement()) {
 
@@ -237,6 +238,19 @@ public class InventoryManagement {
 
         tabbedPane.addTab("Completed Orders", completedPanel);
 
+
+// Pending Orders Save Button
+        JButton saveOrderButton = new JButton("Save Order");
+        saveOrderButton.addActionListener(e -> {
+            try {
+                savePendingOrder(dbConn, ordersTable);
+                loadPendingOrdersData(dbConn, ordersTable);  // Refresh orders after saving
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        });
+        ordersButtonPanel.add(saveOrderButton);
+
         // add tabbed pane to frame
         frame.add(tabbedPane);
 
@@ -403,5 +417,54 @@ public class InventoryManagement {
     private static void searchBarCustomerOrder(Connection dbConn, JTable table) throws SQLException
     {
 
+    }
+
+
+    private static void savePendingOrder(Connection dbConn, JTable ordersTable) throws SQLException {
+        DefaultTableModel model = (DefaultTableModel) ordersTable.getModel();
+
+        for (int row = 0; row < model.getRowCount(); row++) {
+            int orderId = (int) model.getValueAt(row, 0); // Assuming order_id is the first column
+            String firstName = (String) model.getValueAt(row, 1);
+            String lastName = (String) model.getValueAt(row, 2);
+            String itemName = (String) model.getValueAt(row, 3);
+            int quantity = (int) model.getValueAt(row, 4);
+            double price = Double.parseDouble(model.getValueAt(row, 5).toString().replace("$", ""));
+            String status = (String) model.getValueAt(row, 6);
+
+            // Check if the order exists and should be updated
+            String checkSQL = "SELECT COUNT(*) FROM PendingOrders WHERE order_id = ?";
+            try (PreparedStatement checkStmt = dbConn.prepareStatement(checkSQL)) {
+                checkStmt.setInt(1, orderId);
+                ResultSet rs = checkStmt.executeQuery();
+                rs.next();
+                int exists = rs.getInt(1);
+
+                if (exists > 0) { // Order exists, so update it
+                    String updateSQL = "UPDATE PendingOrders SET first_name = ?, last_name = ?, item_name = ?, quantity = ?, price = ?, status = ? WHERE order_id = ?";
+                    try (PreparedStatement pstmt = dbConn.prepareStatement(updateSQL)) {
+                        pstmt.setString(1, firstName);
+                        pstmt.setString(2, lastName);
+                        pstmt.setString(3, itemName);
+                        pstmt.setInt(4, quantity);
+                        pstmt.setDouble(5, price);
+                        pstmt.setString(6, status);
+                        pstmt.setInt(7, orderId);
+                        pstmt.executeUpdate();
+                    }
+                } else { // Order does not exist, insert it as new
+                    String insertSQL = "INSERT INTO PendingOrders (first_name, last_name, item_name, quantity, price, status) VALUES (?, ?, ?, ?, ?, ?)";
+                    try (PreparedStatement pstmt = dbConn.prepareStatement(insertSQL)) {
+                        pstmt.setString(1, firstName);
+                        pstmt.setString(2, lastName);
+                        pstmt.setString(3, itemName);
+                        pstmt.setInt(4, quantity);
+                        pstmt.setDouble(5, price);
+                        pstmt.setString(6, status);
+                        pstmt.executeUpdate();
+                    }
+                }
+            }
+        }
     }
 }
