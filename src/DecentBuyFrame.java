@@ -3,6 +3,8 @@ import javax.swing.*;
 import java.awt.BorderLayout;
 import java.sql.*;
 
+
+@SuppressWarnings("unused")
 public class DecentBuyFrame extends JFrame{
     DecentBuyOrderData DBDB_OrderData = new DecentBuyOrderData();
     DatabaseConn Conn = new DatabaseConn();
@@ -46,6 +48,7 @@ public class DecentBuyFrame extends JFrame{
         return inventoryPanel;
     }
 
+
     public JPanel createSearchPanel(Connection dbConn, JTable table) {
         JPanel searchPanel = new JPanel();
         String[] searchOptions = {"Item Name", "Category"};
@@ -54,6 +57,7 @@ public class DecentBuyFrame extends JFrame{
         JButton searchButton = new JButton("Search");
 
         searchButton.addActionListener(e -> {
+
             try {
                 DBDB_OrderData.searchBarInventory(dbConn, table, searchDropdown.getSelectedItem().toString(), searchTextField.getText());
             } catch (SQLException ex) {
