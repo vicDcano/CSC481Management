@@ -1,33 +1,24 @@
-//import javax.swing.JButton;
-//import javax.swing.JFrame;
-//import javax.swing.JPanel;
-//import javax.swing.JScrollPane;
-//import javax.swing.JTabbedPane;
-import javax.swing.JTable;
-//import javax.swing.JComboBox;
-//import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
-//import javax.swing.table.DefaultTableModel;
-//import java.sql.PreparedStatement;
-
-//import java.awt.BorderLayout;
-
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import javax.swing.*;
+//import javax.swing.table.*;
+//import java.awt.*;
+//import java.sql.*;
 
 public class InventoryManagement {
-    static final String DB_URL = "jdbc:mysql://localhost:3306/";
-    static final String USER = "root";  
-    static final String PASS = "1234"; // plug in your password
-    DecentBuyOrderData DBDB_OrderData = new DecentBuyOrderData();
-    DecentBuyFrame DBDBFrame = new DecentBuyFrame();
+    DatabaseConn dbconn = new DatabaseConn();
+    //DecentBuyFrame DBDBFrame = new DecentBuyFrame();
     public void main(String[] args)
     {
-        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
-             Statement stmt = conn.createStatement()) {
+        try {
+            SwingUtilities.invokeLater(() -> new DBLogin());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+ /*
+        try (Connection conn = dbconn.getConnection()) {
+            // Statement stmt = conn.createStatement()) {
 
             // create database
             String sql = "CREATE DATABASE IF NOT EXISTS mydatabase";
@@ -78,23 +69,23 @@ public class InventoryManagement {
             } else {
                 System.out.println("Data already exists, skipping initial insertion...");
             }
-
+ 
             // GUI
-            SwingUtilities.invokeLater(() -> createAndShowGUI(dbConn));
+            SwingUtilities.invokeLater(() -> new DBLogin());
 
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
-
     private void createAndShowGUI(Connection dbConn) {
         JTable table = new JTable();
         DBDBFrame.dbFrame(dbConn);
-        DBDBFrame.createTabbedPane(dbConn);
         DBDBFrame.createCanceledOrdersPanel(dbConn);
         DBDBFrame.createInventoryPanel(dbConn);
         DBDBFrame.createInventoryButtonPanel(dbConn, table);
         DBDBFrame.createSearchPanel(dbConn, table);
         DBDBFrame.createCompletedOrdersPanel(dbConn);
     }
+        
 }
+*/

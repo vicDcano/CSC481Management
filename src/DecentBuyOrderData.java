@@ -1,23 +1,7 @@
-//import javax.swing.JButton;
-//import javax.swing.JFrame;
-//import javax.swing.JPanel;
-//import javax.swing.JScrollPane;
-//import javax.swing.JTabbedPane;
-import javax.swing.JTable;
-//import javax.swing.JComboBox;
-//import javax.swing.JTextField;
-//import javax.swing.SwingUtilities;
-import javax.swing.table.DefaultTableModel;
-import java.sql.PreparedStatement;
-
-//import java.awt.BorderLayout;
-
-import java.sql.Connection;
-//import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-//import java.sql.Statement;
-
+import javax.swing.*;
+import javax.swing.table.*;
+//import java.awt.*;
+import java.sql.*;
 
 public class DecentBuyOrderData {
 
@@ -44,21 +28,23 @@ public class DecentBuyOrderData {
     }
 
     public void loadInventoryData(Connection dbConn, JTable table) throws SQLException {
-        String selectSQL = "SELECT id, item_name, category, quantity, price FROM Inventory";
+        String selectSQL = "SELECT * FROM Products";
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
         // extract data from result set
-        String[] columnNames = {"ID", "Item Name", "Category", "Quantity", "Price"};
+        String[] columnNames = {"idProducts", "ProductsName", "ProductsCategory", "ProductsBrand", "ProductsPrice", "ProductsStock"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
         while (rs.next()) {
-            int id = rs.getInt("id");
-            String itemName = rs.getString("item_name");
-            String category = rs.getString("category");
-            int quantity = rs.getInt("quantity");
-            double price = rs.getDouble("price");
-            String formattedPrice = String.format("$%.2f", price);
-            Object[] row = {id, itemName, category, quantity, formattedPrice};
+            int ID = rs.getInt("idProducts");
+            String itemName = rs.getString("ProductsName");
+            String category = rs.getString("ProductsCategory");
+            String brand = rs.getString("ProductsBrand");
+            //double price = rs.getDouble("ProductsPrice");
+            String Price = String.format("$%.2f", rs.getDouble("ProductsPrice"));
+
+            int quantity = rs.getInt("ProductsStock");
+            Object[] row = {ID, itemName, category, brand, Price, quantity};
             model.addRow(row);
         }
 
@@ -177,12 +163,6 @@ public class DecentBuyOrderData {
         }
     }
 
-   // private static void searchBarCustomerOrder(Connection dbConn, JTable table) throws SQLException
-//    {
-
-  //  }
-
-
     public void savePendingOrder(Connection dbConn, JTable ordersTable) throws SQLException {
         DefaultTableModel model = (DefaultTableModel) ordersTable.getModel();
 
@@ -230,8 +210,4 @@ public class DecentBuyOrderData {
             }
         }
     }
-
-
-
-
 }
