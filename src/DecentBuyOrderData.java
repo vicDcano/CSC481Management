@@ -131,35 +131,38 @@ public class DecentBuyOrderData {
 
     public void searchBarInventory(Connection dbConn, JTable table, String searchCriterion, String searchInput) throws SQLException
     {
-        String searchColumn = "item_name";  // Default search by item name
+        String searchColumn = "ProductsName";  // Default search by item name
 
         // Map the search criterion to the correct column
-        if (searchCriterion.equals("Category")) {
-            searchColumn = "category";
+        if (searchCriterion.equals("ProductsCategory")) {
+            searchColumn = "ProductsCategory";
         }
 
         // SQL query with parameterized search
-        String searchSQL = "SELECT id, item_name, category, quantity, price FROM Inventory WHERE " + searchColumn + " LIKE ?";
+        String searchSQL = "SELECT * FROM Products WHERE " + searchColumn + " LIKE ?";
         try (PreparedStatement pstmt = dbConn.prepareStatement(searchSQL)) {
             pstmt.setString(1, "%" + searchInput + "%");  // Use wildcards for partial matches
             ResultSet rs = pstmt.executeQuery();
 
             // Extract data and update the table model
-            String[] columnNames = {"ID", "Item Name", "Category", "Quantity", "Price"};
+            String[] columnNames = {"idProducts", "ProductsName", "ProductsCategory", "ProductsBrand", "ProductsPrice", "ProductsStock"};
             DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
-            while (rs.next()) {
-                int id = rs.getInt("id");
-                String itemName = rs.getString("item_name");
-                String category = rs.getString("category");
-                int quantity = rs.getInt("quantity");
-                double price = rs.getDouble("price");
-                String formattedPrice = String.format("$%.2f", price);
-                Object[] row = {id, itemName, category, quantity, formattedPrice};
-                model.addRow(row);
-            }
+        while (rs.next()) {
+            int ID = rs.getInt("idProducts");
+            String itemName = rs.getString("ProductsName");
+            String category = rs.getString("ProductsCategory");
+            String brand = rs.getString("ProductsBrand");
+            //double price = rs.getDouble("ProductsPrice");
+            String Price = String.format("$%.2f", rs.getDouble("ProductsPrice"));
 
-            table.setModel(model);  // Update table with search results
+            int quantity = rs.getInt("ProductsStock");
+            Object[] row = {ID, itemName, category, brand, Price, quantity};
+            model.addRow(row);
+        }
+
+        // set model to table
+        table.setModel(model);
         }
     }
 
