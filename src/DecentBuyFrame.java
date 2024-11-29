@@ -1,5 +1,5 @@
 import javax.swing.*;
-//ximport javax.swing.table.*;
+import javax.swing.table.*;
 import java.awt.BorderLayout;
 import java.sql.*;
 
@@ -21,7 +21,7 @@ public class DecentBuyFrame extends JFrame{
 
     public JTabbedPane createTabbedPane(Connection dbConn) {
         JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.addTab("Inventory", createInventoryPanel(dbConn));
+        tabbedPane.addTab("Product Inventory", createInventoryPanel(dbConn));
         tabbedPane.addTab("Pending Orders", createOrdersPanel(dbConn));
         tabbedPane.addTab("Canceled Orders", createCanceledOrdersPanel(dbConn));
         tabbedPane.addTab("Completed Orders", createCompletedOrdersPanel(dbConn));
@@ -51,7 +51,7 @@ public class DecentBuyFrame extends JFrame{
 
     public JPanel createSearchPanel(Connection dbConn, JTable table) {
         JPanel searchPanel = new JPanel();
-        String[] searchOptions = {"Item Name", "Category"};
+        String[] searchOptions = {"Product Name", "Category"};
         JComboBox<String> searchDropdown = new JComboBox<>(searchOptions);
         JTextField searchTextField = new JTextField(15);
         JButton searchButton = new JButton("Search");
@@ -279,5 +279,14 @@ public class DecentBuyFrame extends JFrame{
         completedPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         return completedPanel;
+    }
+
+
+    public static void main(String[] args) {
+        try {
+            new DecentBuyFrame();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }
