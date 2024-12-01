@@ -1,43 +1,27 @@
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTabbedPane;
-import javax.swing.JTable;
-import javax.swing.JComboBox;
-import javax.swing.JDialog;
-import javax.swing.JTextField;
-//import javax.swing.SwingUtilities;
-//import javax.swing.table.DefaultTableModel;
-//import java.sql.PreparedStatement;
-
+import javax.swing.*;
+import javax.swing.table.*;
 import java.awt.BorderLayout;
+import java.sql.*;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-//import java.sql.DriverManager;
-//import java.sql.ResultSet;
-import java.sql.SQLException;
-//import java.sql.Statement;
 
-public class DecentBuyFrame {
+@SuppressWarnings("unused")
+public class DecentBuyFrame extends JFrame{
     DecentBuyOrderData DBDB_OrderData = new DecentBuyOrderData();
+    DatabaseConn Conn = new DatabaseConn();
+
     
-    public void dbFrame(Connection dbConn) {
-        JFrame frame = new JFrame("DecentBuy Inventory Management");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(800, 600);
-        frame.add(createTabbedPane(dbConn));
-        frame.setVisible(true);
+    public DecentBuyFrame() throws SQLException {
+        Connection dbConn = Conn.getConnection();
+        setTitle("DecentBuy Inventory Management");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(800, 600);
+        add(createTabbedPane(dbConn));
+        setVisible(true);
     }
 
     public JTabbedPane createTabbedPane(Connection dbConn) {
         JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.addTab("Inventory", createInventoryPanel(dbConn));
+        tabbedPane.addTab("Product Inventory", createInventoryPanel(dbConn));
         tabbedPane.addTab("Pending Orders", createOrdersPanel(dbConn));
         tabbedPane.addTab("Canceled Orders", createCanceledOrdersPanel(dbConn));
         tabbedPane.addTab("Completed Orders", createCompletedOrdersPanel(dbConn));
@@ -64,14 +48,16 @@ public class DecentBuyFrame {
         return inventoryPanel;
     }
 
+
     public JPanel createSearchPanel(Connection dbConn, JTable table) {
         JPanel searchPanel = new JPanel();
-        String[] searchOptions = {"Item Name", "Category"};
+        String[] searchOptions = {"Product Name", "Category"};
         JComboBox<String> searchDropdown = new JComboBox<>(searchOptions);
         JTextField searchTextField = new JTextField(15);
         JButton searchButton = new JButton("Search");
 
         searchButton.addActionListener(e -> {
+
             try {
                 DBDB_OrderData.searchBarInventory(dbConn, table, searchDropdown.getSelectedItem().toString(), searchTextField.getText());
             } catch (SQLException ex) {
@@ -102,16 +88,16 @@ public class DecentBuyFrame {
 
     private void updateInventoryQuantities(Connection dbConn) throws SQLException {
         String updateInventorySQL = 
-            "UPDATE Inventory AS i " +
+            "UPDATE Products AS p " +
             "JOIN ( " +
-            "    SELECT item_name, SUM(quantity) AS total_ordered " +
+            "    SELECT product_name, SUM(quantity) AS total_ordered " +
             "    FROM PendingOrders " +
             "    WHERE processed = FALSE " +
-            "    GROUP BY item_name " +
+            "    GROUP BY product_name " +
             ") AS o " +
-            "ON i.item_name = o.item_name " +
-            "SET i.quantity = i.quantity - o.total_ordered " +
-            "WHERE i.quantity >= o.total_ordered";
+            "ON p.ProductsName = o.product_name " +
+            "SET p.ProductsStock = p.ProductsStock - o.total_ordered " +
+            "WHERE p.ProductsStock >= o.total_ordered";
     
         try (PreparedStatement pstmt = dbConn.prepareStatement(updateInventorySQL)) {
             int rowsUpdated = pstmt.executeUpdate();
@@ -219,7 +205,7 @@ public class DecentBuyFrame {
     }
 
     private void addOrderToDatabase(Connection dbConn, String firstName, String lastName, String itemName, int quantity) throws SQLException {
-        String selectSQL = "SELECT price, quantity FROM Inventory WHERE item_name = ?";
+        String selectSQL = "SELECT ProductsPrice AS price, ProductsStock AS quantity FROM Products WHERE ProductsName = ?";
         double price = 0.0;
         int availableQuantity = 0;
 
@@ -239,7 +225,7 @@ public class DecentBuyFrame {
         }
 
         double totalPrice = price * quantity;
-        String insertOrderSQL = "INSERT INTO PendingOrders (first_name, last_name, item_name, quantity, price, status, processed) VALUES (?, ?, ?, ?, ?, 'Pending', FALSE)";
+        String insertOrderSQL = "INSERT INTO PendingOrders (first_name, last_name, product_name, quantity, price, status, processed) VALUES (?, ?, ?, ?, ?, 'Pending', FALSE)";
         try (PreparedStatement insertStmt = dbConn.prepareStatement(insertOrderSQL)) {
             insertStmt.setString(1, firstName);
             insertStmt.setString(2, lastName);
@@ -293,5 +279,14 @@ public class DecentBuyFrame {
         completedPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         return completedPanel;
+    }
+
+
+    public static void main(String[] args) {
+        try {
+            new DecentBuyFrame();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }
