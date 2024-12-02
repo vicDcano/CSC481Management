@@ -112,13 +112,13 @@ public class DBLogin extends JFrame {
     }
 
 
- /* if you want to run this file to make any changes
-  * you can remove this comment to run the main
+  //if you want to run this file to make any changes
+  // you can remove this comment to run the main
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(DBLogin::new);
     }
         
-*/
+
 
 }

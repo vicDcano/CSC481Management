@@ -2,13 +2,18 @@ import javax.swing.*;
 import javax.swing.table.*;
 import java.awt.BorderLayout;
 import java.sql.*;
+import java.text.DateFormat;
+import java.time.LocalDate;
+import java.time.format.*;
+
 
 
 @SuppressWarnings("unused")
 public class DecentBuyFrame extends JFrame{
     DecentBuyOrderData DBDB_OrderData = new DecentBuyOrderData();
     DatabaseConn Conn = new DatabaseConn();
-
+    LocalDate currentDate = LocalDate.now();
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
     public DecentBuyFrame() throws SQLException {
         Connection dbConn = Conn.getConnection();
@@ -22,9 +27,9 @@ public class DecentBuyFrame extends JFrame{
     public JTabbedPane createTabbedPane(Connection dbConn) {
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.addTab("Product Inventory", createInventoryPanel(dbConn));
-        tabbedPane.addTab("Pending Orders", createOrdersPanel(dbConn));
-        tabbedPane.addTab("Canceled Orders", createCanceledOrdersPanel(dbConn));
-        tabbedPane.addTab("Completed Orders", createCompletedOrdersPanel(dbConn));
+        tabbedPane.addTab("Orders", createOrdersPanel(dbConn));
+        //tabbedPane.addTab("Cancelled Orders", createCompletedOrdersPanel(dbConn));
+        //tabbedPane.addTab("Current Orders", createCanceledOrdersPanel(dbConn));
         return tabbedPane;
     }
 
@@ -51,7 +56,7 @@ public class DecentBuyFrame extends JFrame{
 
     public JPanel createSearchPanel(Connection dbConn, JTable table) {
         JPanel searchPanel = new JPanel();
-        String[] searchOptions = {"Product Name", "Category"};
+        String[] searchOptions = {"idProducts", "ProductsName", "ProductsCategory", "ProductsBrand", "ProductsPrice", "ProductsStock"};
         JComboBox<String> searchDropdown = new JComboBox<>(searchOptions);
         JTextField searchTextField = new JTextField(15);
         JButton searchButton = new JButton("Search");
@@ -71,6 +76,35 @@ public class DecentBuyFrame extends JFrame{
         return searchPanel;
     }
 
+    public JPanel createOrderSearchPanel(Connection dbConn, JTable table) {
+        JPanel searchPanel = new JPanel();
+        String[] searchOptions = {"idDBOrder", "Current", "Pending", "Cancelled", "Customer", "Supplier"};
+        JComboBox<String> searchDropdown = new JComboBox<>(searchOptions);
+        JTextField searchTextField = new JTextField(15);
+        JButton searchButton = new JButton("Search");
+
+        searchButton.addActionListener(e -> {
+
+            try {
+                DBDB_OrderData.searchBarInventory(dbConn, table, searchDropdown.getSelectedItem().toString(), searchTextField.getText());
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        searchPanel.add(searchDropdown);
+        searchPanel.add(searchTextField);
+        searchPanel.add(searchButton);
+        return searchPanel;
+    }
+
+    
+
+
+
+
+
+
     public JPanel createInventoryButtonPanel(Connection dbConn, JTable table) {
         JPanel buttonPanel = new JPanel();
         JButton refreshButton = new JButton("Refresh Inventory");
@@ -88,16 +122,14 @@ public class DecentBuyFrame extends JFrame{
 
     private void updateInventoryQuantities(Connection dbConn) throws SQLException {
         String updateInventorySQL = 
-            "UPDATE Inventory AS i " +
-            "JOIN ( " +
-            "    SELECT item_name, SUM(quantity) AS total_ordered " +
-            "    FROM PendingOrders " +
-            "    WHERE processed = FALSE " +
-            "    GROUP BY item_name " +
-            ") AS o " +
-            "ON i.item_name = o.item_name " +
-            "SET i.quantity = i.quantity - o.total_ordered " +
-            "WHERE i.quantity >= o.total_ordered";
+                "UPDATE Products AS i " +
+                "JOIN " +
+                    "(SELECT ProductsName, SUM(ProductsStock) AS total_ordered " +
+                    " FROM PendingOrders WHERE processed = FALSE" +
+                    " GROUP BY ProductsName ) As o" +
+                    " ON i.ProductsName = o.ProductsName " +
+                    " SET i.ProductsStock = i.ProductsStock - o.total_ordered " +
+                    " WHERE i.ProductsStock >= o.total_ordered";
     
         try (PreparedStatement pstmt = dbConn.prepareStatement(updateInventorySQL)) {
             int rowsUpdated = pstmt.executeUpdate();
@@ -150,38 +182,42 @@ public class DecentBuyFrame extends JFrame{
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        JTextField firstNameField = new JTextField(20);
-        JTextField lastNameField = new JTextField(20);
-        JTextField itemNameField = new JTextField(20);
-        JTextField quantityField = new JTextField(20);
+        JTextField idDBOField = new JTextField(20);
+        JTextField DBO_Quantity = new JTextField(20);
+        JTextField DBO_Cost = new JTextField(20);
+        JTextField DBO_Type = new JTextField(20);
+        JTextField DBO_Date = new JTextField(20);
 
-        panel.add(new JLabel("First Name:"));
-        panel.add(firstNameField);
-        panel.add(new JLabel("Last Name:"));
-        panel.add(lastNameField);
-        panel.add(new JLabel("Item Name:"));
-        panel.add(itemNameField);
+
+        panel.add(new JLabel("Order ID:"));
+        panel.add(idDBOField);
+        panel.add(new JLabel("Date: (YYYY-MM-DD)"));
+        panel.add(DBO_Date);
         panel.add(new JLabel("Quantity:"));
-        panel.add(quantityField);
+        panel.add(DBO_Quantity);
+        panel.add(new JLabel("Type:"));
+        panel.add(DBO_Type);
+  
 
         JButton submitButton = new JButton("Submit");
         JButton cancelButton = new JButton("Cancel");
 
         // Add action listener to Submit button
         submitButton.addActionListener(e -> {
-            String firstName = firstNameField.getText();
-            String lastName = lastNameField.getText();
-            String itemName = itemNameField.getText();
-            String quantityText = quantityField.getText();
+            String id = idDBOField.getText();
+            String formattedDate = DBO_Date.getText();
+            String stock = DBO_Quantity.getText();
+            String cost = DBO_Cost.getText();
+            String type = DBO_Type.getText();
 
-            if (firstName.isEmpty() || lastName.isEmpty() || itemName.isEmpty() || quantityText.isEmpty()) {
+            if (id.isEmpty() || stock.isEmpty() || cost.isEmpty() || type.isEmpty()) {
                 JOptionPane.showMessageDialog(dialog, "All fields must be filled!", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
             try {
-                int quantity = Integer.parseInt(quantityText);
-                addOrderToDatabase(dbConn, firstName, lastName, itemName, quantity);
+                int quantity = Integer.parseInt(stock);
+                //addOrderToDatabase(dbConn, id, date, stock, cost, type);
                 DBDB_OrderData.loadPendingOrdersData(dbConn, ordersTable); // Refresh the table
                 dialog.dispose();
             } catch (NumberFormatException ex) {
@@ -203,9 +239,9 @@ public class DecentBuyFrame extends JFrame{
 
         dialog.setVisible(true);
     }
-
-    private void addOrderToDatabase(Connection dbConn, String firstName, String lastName, String itemName, int quantity) throws SQLException {
-        String selectSQL = "SELECT price, quantity FROM Inventory WHERE item_name = ?";
+/*
+    private void addOrderToDatabase(Connection dbConn, String id, String date, int stock, String cost, String type) throws SQLException {
+        String selectSQL = "SELECT price, quantity FROM Products WHERE ProductsName = ?";
         double price = 0.0;
         int availableQuantity = 0;
 
@@ -225,7 +261,9 @@ public class DecentBuyFrame extends JFrame{
         }
 
         double totalPrice = price * quantity;
-        String insertOrderSQL = "INSERT INTO PendingOrders (first_name, last_name, item_name, quantity, price, status, processed) VALUES (?, ?, ?, ?, ?, 'Pending', FALSE)";
+        String insertOrderSQL = "INSERT INTO DBOrders (idDBOrders, DBOrderDate, DBOrderQuantity, "  
+                              + "DBOrderTotal, DBOrderStatus, DBOrderType) " 
+                              + "VALUES (?,?,?,?,'Pending',? , FALSE)";
         try (PreparedStatement insertStmt = dbConn.prepareStatement(insertOrderSQL)) {
             insertStmt.setString(1, firstName);
             insertStmt.setString(2, lastName);
@@ -236,7 +274,10 @@ public class DecentBuyFrame extends JFrame{
             System.out.println("Order added successfully.");
         }
     }
+ */
 
+ //delete the comment bellow to access the cancelled and coomplete orders
+ /*  
     public JPanel createCanceledOrdersPanel(Connection dbConn) {
         JPanel canceledPanel = new JPanel(new BorderLayout());
         JTable canceledTable = new JTable();
@@ -281,6 +322,7 @@ public class DecentBuyFrame extends JFrame{
         return completedPanel;
     }
 
+    */
 
     public static void main(String[] args) {
         try {
