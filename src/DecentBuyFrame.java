@@ -12,14 +12,16 @@ import java.time.format.*;
 public class DecentBuyFrame extends JFrame{
     DecentBuyOrderData DBDB_OrderData = new DecentBuyOrderData();
     DatabaseConn Conn = new DatabaseConn();
+    
     LocalDate currentDate = LocalDate.now();
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    
+
     public DecentBuyFrame() throws SQLException {
         Connection dbConn = Conn.getConnection();
         setTitle("DecentBuy Inventory Management");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(800, 600);
+
         add(createTabbedPane(dbConn));
         setVisible(true);
     }
@@ -53,10 +55,9 @@ public class DecentBuyFrame extends JFrame{
         return inventoryPanel;
     }
 
-
     public JPanel createSearchPanel(Connection dbConn, JTable table) {
         JPanel searchPanel = new JPanel();
-        String[] searchOptions = {"idProducts", "ProductsName", "ProductsCategory", "ProductsBrand", "ProductsPrice", "ProductsStock"};
+        String[] searchOptions = {"idProducts", "productName", "productCategory", "productBrand", "productPrice", "productStock"};
         JComboBox<String> searchDropdown = new JComboBox<>(searchOptions);
         JTextField searchTextField = new JTextField(15);
         JButton searchButton = new JButton("Search");
@@ -98,13 +99,6 @@ public class DecentBuyFrame extends JFrame{
         return searchPanel;
     }
 
-    
-
-
-
-
-
-
     public JPanel createInventoryButtonPanel(Connection dbConn, JTable table) {
         JPanel buttonPanel = new JPanel();
         JButton refreshButton = new JButton("Refresh Inventory");
@@ -122,7 +116,7 @@ public class DecentBuyFrame extends JFrame{
 
     private void updateInventoryQuantities(Connection dbConn) throws SQLException {
         String updateInventorySQL = 
-                "UPDATE Products AS i " +
+                "UPDATE Products AS inventory " +
                 "JOIN " +
                     "(SELECT ProductsName, SUM(ProductsStock) AS total_ordered " +
                     " FROM PendingOrders WHERE processed = FALSE" +
@@ -130,14 +124,14 @@ public class DecentBuyFrame extends JFrame{
                     " ON i.ProductsName = o.ProductsName " +
                     " SET i.ProductsStock = i.ProductsStock - o.total_ordered " +
                     " WHERE i.ProductsStock >= o.total_ordered";
-    
+
         try (PreparedStatement pstmt = dbConn.prepareStatement(updateInventorySQL)) {
             int rowsUpdated = pstmt.executeUpdate();
             System.out.println(rowsUpdated + " inventory items updated based on pending orders.");
         }
-    
+
         String markedProcessedSQL = 
-            "UPDATE PendingOrders SET processed = TRUE WHERE processed = FALSE";
+            "UPDATE DBOrder SET processed = TRUE WHERE processed = FALSE";
         try (PreparedStatement pstmt = dbConn.prepareStatement(markedProcessedSQL)) {
             pstmt.executeUpdate();
         }
@@ -151,9 +145,16 @@ public class DecentBuyFrame extends JFrame{
 
         JPanel buttonPanel = new JPanel();
         JButton refreshOrdersButton = new JButton("Refresh Orders");
+
+        try {
+            DBDB_OrderData.loadOrdersData(dbConn, ordersTable);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
         refreshOrdersButton.addActionListener(e -> {
             try {
-                DBDB_OrderData.loadPendingOrdersData(dbConn, ordersTable);
+                DBDB_OrderData.loadOrdersData(dbConn, ordersTable);
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
@@ -161,7 +162,7 @@ public class DecentBuyFrame extends JFrame{
         buttonPanel.add(refreshOrdersButton);
 
         JButton addOrderButton = new JButton("Add Order");
-        addOrderButton.addActionListener(e -> openAddOrderDialog(dbConn, ordersTable)); {
+       addOrderButton.addActionListener(e -> openAddOrderDialog(dbConn, ordersTable)); {
         buttonPanel.add(addOrderButton);
 
         ordersPanel.add(buttonPanel, BorderLayout.SOUTH);
@@ -171,159 +172,155 @@ public class DecentBuyFrame extends JFrame{
     }
 
     private void openAddOrderDialog(Connection dbConn, JTable ordersTable) {
-        // Create a dialog window
-        JDialog dialog = new JDialog();
-        dialog.setTitle("Add New Order");
-        dialog.setSize(400, 300);
-        dialog.setLocationRelativeTo(null);
-        dialog.setModal(true);
+    // Create a dialog window
+    JDialog dialog = new JDialog();
+    dialog.setTitle("Add New Order");
+    dialog.setSize(400, 400);
+    dialog.setLocationRelativeTo(null);
+    dialog.setModal(true);
 
-        // Create input fields
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+    // Create input fields
+    JPanel panel = new JPanel();
+    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        JTextField idDBOField = new JTextField(20);
-        JTextField DBO_Quantity = new JTextField(20);
-        JTextField DBO_Cost = new JTextField(20);
-        JTextField DBO_Type = new JTextField(20);
-        JTextField DBO_Date = new JTextField(20);
+    JTextField idDBOField = new JTextField(20);
+    JTextField DBO_Quantity = new JTextField(20);
+    JTextField DBO_Type = new JTextField(20);
+    JTextField DBO_Date = new JTextField(20);
 
-
-        panel.add(new JLabel("Order ID:"));
-        panel.add(idDBOField);
-        panel.add(new JLabel("Date: (YYYY-MM-DD)"));
-        panel.add(DBO_Date);
-        panel.add(new JLabel("Quantity:"));
-        panel.add(DBO_Quantity);
-        panel.add(new JLabel("Type:"));
-        panel.add(DBO_Type);
-  
-
-        JButton submitButton = new JButton("Submit");
-        JButton cancelButton = new JButton("Cancel");
-
-        // Add action listener to Submit button
-        submitButton.addActionListener(e -> {
-            String id = idDBOField.getText();
-            String formattedDate = DBO_Date.getText();
-            String stock = DBO_Quantity.getText();
-            String cost = DBO_Cost.getText();
-            String type = DBO_Type.getText();
-
-            if (id.isEmpty() || stock.isEmpty() || cost.isEmpty() || type.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "All fields must be filled!", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            try {
-                int quantity = Integer.parseInt(stock);
-                //addOrderToDatabase(dbConn, id, date, stock, cost, type);
-                DBDB_OrderData.loadPendingOrdersData(dbConn, ordersTable); // Refresh the table
-                dialog.dispose();
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(dialog, "Quantity must be a number!", "Error", JOptionPane.ERROR_MESSAGE);
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-                JOptionPane.showMessageDialog(dialog, "Failed to add order. Check logs for details.", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-        cancelButton.addActionListener(e -> dialog.dispose());
-
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.add(submitButton);
-        buttonPanel.add(cancelButton);
-
-        dialog.add(panel, BorderLayout.CENTER);
-        dialog.add(buttonPanel, BorderLayout.SOUTH);
-
-        dialog.setVisible(true);
+    JComboBox<String> itemComboBox = new JComboBox<>(); // Populates products
+    try {
+        Statement stmt = dbConn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT productName FROM Products");
+        while (rs.next()) {
+            itemComboBox.addItem(rs.getString("productName"));
+        }
+    } catch (SQLException ex) {
+        ex.printStackTrace();
     }
-/*
-    private void addOrderToDatabase(Connection dbConn, String id, String date, int stock, String cost, String type) throws SQLException {
-        String selectSQL = "SELECT price, quantity FROM Products WHERE ProductsName = ?";
-        double price = 0.0;
-        int availableQuantity = 0;
 
-        try (PreparedStatement selectStmt = dbConn.prepareStatement(selectSQL)) {
-            selectStmt.setString(1, itemName);
-            ResultSet rs = selectStmt.executeQuery();
-            if (rs.next()) {
-                price = rs.getDouble("price");
-                availableQuantity = rs.getInt("quantity");
+    // Add fields to the panel
+    panel.add(new JLabel("Order ID:"));
+    panel.add(idDBOField);
+    panel.add(new JLabel("Date (YYYY-MM-DD):"));
+    panel.add(DBO_Date);
+    panel.add(new JLabel("Quantity:"));
+    panel.add(DBO_Quantity);
+    panel.add(new JLabel("Type (Customer or Supplier):"));
+    panel.add(DBO_Type);
+    panel.add(new JLabel("Product:"));
+    panel.add(itemComboBox);
 
-                if (availableQuantity < quantity) {
-                    throw new SQLException("Insufficient inventory for item: " + itemName);
+    // Buttons
+    JButton submitButton = new JButton("Submit");
+    JButton cancelButton = new JButton("Cancel");
+
+    // Submit button action
+    submitButton.addActionListener(e -> {
+        String id = idDBOField.getText();
+        String formattedDate = DBO_Date.getText();
+        String quantityText = DBO_Quantity.getText();
+        String type = DBO_Type.getText();
+        String productName = (String) itemComboBox.getSelectedItem();
+
+        if (id.isEmpty() || formattedDate.isEmpty() || quantityText.isEmpty() || type.isEmpty() || productName == null) {
+            JOptionPane.showMessageDialog(dialog, "All fields must be filled!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            int orderId = Integer.parseInt(id);
+            int quantity = Integer.parseInt(quantityText);
+            double price = 0.0;
+
+            // Fetch product price
+            String selectPriceSQL = "SELECT ProductsPrice FROM Products WHERE productName = ?";
+            try (PreparedStatement pstmt = dbConn.prepareStatement(selectPriceSQL)) {
+                pstmt.setString(1, productName);
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    price = rs.getDouble("ProductsPrice");
+                } else {
+                    JOptionPane.showMessageDialog(dialog, "Product not found!", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
-            } else {
-                throw new SQLException("Item not found in inventory: " + itemName);
             }
-        }
 
-        double totalPrice = price * quantity;
-        String insertOrderSQL = "INSERT INTO DBOrders (idDBOrders, DBOrderDate, DBOrderQuantity, "  
-                              + "DBOrderTotal, DBOrderStatus, DBOrderType) " 
-                              + "VALUES (?,?,?,?,'Pending',? , FALSE)";
-        try (PreparedStatement insertStmt = dbConn.prepareStatement(insertOrderSQL)) {
-            insertStmt.setString(1, firstName);
-            insertStmt.setString(2, lastName);
-            insertStmt.setString(3, itemName);
-            insertStmt.setInt(4, quantity);
-            insertStmt.setDouble(5, totalPrice);
-            insertStmt.executeUpdate();
+            // Calculate total cost
+            double totalCost = price * quantity;
+
+            // Insert the new order
+            addOrderToDatabase(dbConn, orderId, formattedDate, quantity, totalCost, "Pending", type);
+
+            // Refresh the orders table
+            DBDB_OrderData.loadOrdersData(dbConn, ordersTable);
+            dialog.dispose();
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(dialog, "Order ID and Quantity must be numbers!", "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(dialog, "Failed to add order. Check logs for details.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    });
+
+    // Cancel button action
+    cancelButton.addActionListener(e -> dialog.dispose());
+
+    // Add buttons to a panel
+    JPanel buttonPanel = new JPanel();
+    buttonPanel.add(submitButton);
+    buttonPanel.add(cancelButton);
+
+    // Add components to the dialog
+    dialog.add(panel, BorderLayout.CENTER);
+    dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+    dialog.setVisible(true);
+}
+
+    // successfully adds orders, but new orders are not being added to the database, josh look into this 
+    private void addOrderToDatabase(Connection dbConn, int id, String date, int quantity, double totalCost, 
+                                 String supplierName, String productName, String customerFirst, String customerLast, 
+                                 String status, String type) throws SQLException {
+    // SQL query to insert a new order with subqueries for foreign keys
+    String insertSQL = "INSERT INTO decentbuy3.DBOrder " + 
+                       "(idDBOrder, DBOrderDate, DBOrderQuantity, DBOrderTotalCost, " +
+                       "Supplier_idSupplier, Products_idProducts, Customer_idCustomer, " +
+                       "DBOrderStatus, DBOrderType) " +
+                       "VALUES (?, ?, ?, ?, " +
+                       "(SELECT idSupplier FROM decentbuy3.Supplier WHERE SupplierName = ? LIMIT 1), " +
+                       "(SELECT idProducts FROM decentbuy3.Products WHERE productName = ? LIMIT 1), " +
+                       "(SELECT idCustomer FROM decentbuy3.Customer WHERE customerFirst = ? AND customerLast = ? LIMIT 1), " +
+                       "?, ?)";
+
+    try (PreparedStatement pstmt = dbConn.prepareStatement(insertSQL)) {
+        // Set placeholders for the main table values
+        pstmt.setInt(1, id);
+        pstmt.setString(2, date);
+        pstmt.setInt(3, quantity);
+        pstmt.setDouble(4, totalCost);
+
+        // Set placeholders for the subqueries
+        pstmt.setString(5, supplierName); // SupplierName for Supplier_idSupplier
+        pstmt.setString(6, productName); // productName for Products_idProducts
+        pstmt.setString(7, customerFirst); // customerFirst for Customer_idCustomer
+        pstmt.setString(8, customerLast); // customerLast for Customer_idCustomer
+
+        // Set placeholders for order status and type
+        pstmt.setString(9, status);
+        pstmt.setString(10, type);
+
+        // Execute the query
+        int rowsInserted = pstmt.executeUpdate();
+        if (rowsInserted > 0) {
             System.out.println("Order added successfully.");
+        } else {
+            System.out.println("Failed to add the order. Check foreign key references.");
         }
     }
- */
+}
 
- //delete the comment bellow to access the cancelled and coomplete orders
- /*  
-    public JPanel createCanceledOrdersPanel(Connection dbConn) {
-        JPanel canceledPanel = new JPanel(new BorderLayout());
-        JTable canceledTable = new JTable();
-        JScrollPane scrollPane = new JScrollPane(canceledTable);
-        canceledPanel.add(scrollPane, BorderLayout.CENTER);
-
-        JButton refreshCanceledButton = new JButton("Refresh Canceled Orders");
-        refreshCanceledButton.addActionListener(e -> {
-            try {
-                DBDB_OrderData.loadCanceledOrdersData(dbConn, canceledTable);
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
-        });
-
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.add(refreshCanceledButton);
-        canceledPanel.add(buttonPanel, BorderLayout.SOUTH);
-
-        return canceledPanel;
-    }
-
-    public JPanel createCompletedOrdersPanel(Connection dbConn) {
-        JPanel completedPanel = new JPanel(new BorderLayout());
-        JTable completedTable = new JTable();
-        JScrollPane scrollPane = new JScrollPane(completedTable);
-        completedPanel.add(scrollPane, BorderLayout.CENTER);
-
-        JButton refreshCompletedButton = new JButton("Refresh Completed Orders");
-        refreshCompletedButton.addActionListener(e -> {
-            try {
-                DBDB_OrderData.loadCompletedOrdersData(dbConn, completedTable);
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
-        });
-
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.add(refreshCompletedButton);
-        completedPanel.add(buttonPanel, BorderLayout.SOUTH);
-
-        return completedPanel;
-    }
-
-    */
-
+        
     public static void main(String[] args) {
         try {
             new DecentBuyFrame();

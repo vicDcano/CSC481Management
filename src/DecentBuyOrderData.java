@@ -37,18 +37,18 @@ public class DecentBuyOrderData {
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
         // extract data from result set
-        String[] columnNames = {"idProducts", "ProductsName", "ProductsCategory", "ProductsBrand", "ProductsPrice", "ProductsStock"};
+        String[] columnNames = {"ID", "Name", "Category", "Brand", "Price", "Stock"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
         while (rs.next()) {
             int ID = rs.getInt("idProducts");
-            String itemName = rs.getString("ProductsName");
-            String category = rs.getString("ProductsCategory");
-            String brand = rs.getString("ProductsBrand");
+            String itemName = rs.getString("productName");
+            String category = rs.getString("productCategory");
+            String brand = rs.getString("productBrand");
             //double price = rs.getDouble("ProductsPrice");
-            String Price = String.format("$%.2f", rs.getDouble("ProductsPrice"));
+            String Price = String.format("$%.2f", rs.getDouble("productPrice"));
 
-            int quantity = rs.getInt("ProductsStock");
+            int quantity = rs.getInt("productStock");
             Object[] row = {ID, itemName, category, brand, Price, quantity};
             model.addRow(row);
         }
@@ -57,81 +57,51 @@ public class DecentBuyOrderData {
         table.setModel(model);
     }
 
-    public void loadPendingOrdersData(Connection dbConn, JTable table) throws SQLException {
-        String selectSQL = "SELECT * FROM DBOrder";
+    public void loadOrdersData(Connection dbConn, JTable table) throws SQLException {
+        String selectSQL = "SELECT " +
+                           "    Customer.idCustomer, Customer.customerFirst, Customer.customerLast, " +
+                           "    DBOrder.idDBOrder, DBOrder.DBOrderDate, DBOrder.DBOrderQuantity, DBOrder.DBOrderTotalCost, " +
+                           "    Products.idProducts, Products.productName, Products.productPrice " +
+                           "FROM DBOrder " +
+                           "JOIN Customer ON DBOrder.Customer_idCustomer = Customer.idCustomer " +
+                           "JOIN Products ON DBOrder.Products_idProducts = Products.idProducts;";
+    
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
-
-        // extract data from result set
-        String[] columnNames = {"idDBOrder", "DBOrderDate", "DBOrderQuantity", "DBOrderTotalCost", "DBOrderStatus", "DBOrderType"};
+    
+        // Define column headers
+        String[] columnNames = {"Customer ID", "Customer First", "Customer Last", 
+                                "Order ID", "Order Date", "Order Quantity", "Order Total Cost", 
+                                "Product ID", "Product Name", "Product Price"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
-
+    
+        // Process the result set
         while (rs.next()) {
-            int orderId = rs.getInt("IdDBOrder");
-            String OrderDate = rs.getString("DBOrderDate");
-            String OrderQuantity = rs.getString("DBOrderQuantity");
-            String TotalCost = rs.getString("DBOrderTotalCost");
-            String status = rs.getString("DBOrderStatus");
-            String type = rs.getString("DBOrderType");
-            Object[] row = {orderId, OrderDate, OrderQuantity, TotalCost, status, type};
+            int c_ID = rs.getInt("idCustomer");
+            String c_First = rs.getString("customerFirst");
+            String c_Last = rs.getString("customerLast");
+    
+            int o_Id = rs.getInt("idDBOrder");
+            String o_Date = rs.getString("DBOrderDate");
+            int o_Quantity = rs.getInt("DBOrderQuantity");
+            double o_Cost = rs.getDouble("DBOrderTotalCost");
+    
+            int p_ID = rs.getInt("idProducts");
+            String p_Name = rs.getString("productName");
+            double p_Price = rs.getDouble("productPrice");
+    
+            // Add row to the table model
+            Object[] row = {c_ID, c_First, c_Last, o_Id, o_Date, o_Quantity, o_Cost, p_ID, p_Name, p_Price};
             model.addRow(row);
         }
-
-        // set model to table
+    
+        // Set the model for the JTable
         table.setModel(model);
     }
-
-    public void loadCanceledOrdersData(Connection dbConn, JTable table) throws SQLException
-    {
-        String selectSQL = "SELECT * FROM DBOrder where DBOrderStatus like 'Cancelled'";
-        ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
-
-        // extract data from result set
-        String[] columnNames = {"idDBOrder", "DBOrderDate", "DBOrderQuantity", "DBOrderTotalCost", "DBOrderStatus", "DBOrderType"};
-        DefaultTableModel model = new DefaultTableModel(columnNames, 0);
-
-        while (rs.next()) {
-            int orderId = rs.getInt("IdDBOrder");
-            String OrderDate = rs.getString("DBOrderDate");
-            String OrderQuantity = rs.getString("DBOrderQuantity");
-            String TotalCost = rs.getString("DBOrderTotalCost");
-            String status = rs.getString("DBOrderStatus");
-            String type = rs.getString("DBOrderType");
-            Object[] row = {orderId, OrderDate, OrderQuantity, TotalCost, status, type};
-            model.addRow(row);
-        }
-
-        // set model to table
-        table.setModel(model);
-    }
-
-    public void loadCompletedOrdersData(Connection dbConn, JTable table) throws SQLException
-    {
-        String selectSQL = "SELECT * FROM DBOrder where DBOrderStatus like 'Current'";
-        ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
-
-        // extract data from result set
-        String[] columnNames = {"idDBOrder", "DBOrderDate", "DBOrderQuantity", "DBOrderTotalCost", "DBOrderStatus", "DBOrderType"};
-        DefaultTableModel model = new DefaultTableModel(columnNames, 0);
-
-        while (rs.next()) {
-            int orderId = rs.getInt("IdDBOrder");
-            String OrderDate = rs.getString("DBOrderDate");
-            String OrderQuantity = rs.getString("DBOrderQuantity");
-            String TotalCost = rs.getString("DBOrderTotalCost");
-            String status = rs.getString("DBOrderStatus");
-            String type = rs.getString("DBOrderType");
-            Object[] row = {orderId, OrderDate, OrderQuantity, TotalCost, status, type};
-            model.addRow(row);
-        }
-
-        // set model to table
-        table.setModel(model);
-    }
-
+    
     public void searchBarInventory(Connection dbConn, JTable table, String searchCriterion, String searchInput) throws SQLException
     {
-        Set<String> alloweCriteria = Set.of("idProducts", "ProductsName", "ProductsCategory",
-                                            "ProductsBrand", "ProductsPrice", "ProductsStock");
+        Set<String> alloweCriteria = Set.of("idProducts", "productName", "productCategory",
+                                            "productBrand", "productPrice", "productStock");
         if(!alloweCriteria.contains(searchCriterion)) {
             throw new IllegalArgumentException("Invalid Search Criteria");
         }
@@ -143,18 +113,18 @@ public class DecentBuyOrderData {
             pstmt.setString(1, "%" + searchInput + "%");  // Use wildcards for partial matches
             try (ResultSet rs = pstmt.executeQuery()) {
                 // Extract data and update the table model
-                String[] columnNames = {"idProducts", "ProductsName", "ProductsCategory", "ProductsBrand", "ProductsPrice", "ProductsStock"};
+                String[] columnNames = {"idProducts", "productName", "productCategory", "productBrand", "productPrice", "productStock"};
                 DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
                 while (rs.next()) {
                     int ID = rs.getInt("idProducts");
-                    String itemName = rs.getString("ProductsName");
-                    String category = rs.getString("ProductsCategory");
-                    String brand = rs.getString("ProductsBrand");
+                    String itemName = rs.getString("productName");
+                    String category = rs.getString("productCategory");
+                    String brand = rs.getString("productBrand");
                     //double price = rs.getDouble("ProductsPrice");
-                    String Price = String.format("$%.2f", rs.getDouble("ProductsPrice"));
+                    String Price = String.format("$%.2f", rs.getDouble("productPrice"));
 
-                    String quantity = String.valueOf(rs.getInt("ProductsStock"));
+                    String quantity = String.valueOf(rs.getInt("productStock"));
                     Object[] row = {ID, itemName, category, brand, Price, quantity};
                     model.addRow(row);
                 }
@@ -175,7 +145,7 @@ public class DecentBuyOrderData {
             ResultSet rs = pstmt.executeQuery();
 
             // Extract data and update the table model
-            String[] columnNames = {"idDBOrder", "DBOrderDate", "DBOrderQuantity", "DBOrderTotalCost", "DBOrderStatus", "DBOrderType"};
+            String[] columnNames = {"Order ID", "Order Date", "Order Quantity", "Order Total", "Order Status", "Order Type"};
             DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
              while (rs.next()) {

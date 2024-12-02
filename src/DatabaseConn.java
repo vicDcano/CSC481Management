@@ -1,7 +1,7 @@
 import java.sql.*;
 
 public class DatabaseConn {
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/decentbuy2";
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/decentbuy3";
     private static final String DB_USERNAME = "root";
     private static final String DB_PASSWORD = "password678"; //changes this to your pass
 

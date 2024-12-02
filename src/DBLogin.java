@@ -4,7 +4,6 @@ import java.awt.event.*;
 import java.sql.*;
 
 
-
 public class DBLogin extends JFrame {
 
     // Database connection details
@@ -96,7 +95,7 @@ public class DBLogin extends JFrame {
 
     private boolean authenticateUser(String username, String password) {
         try (Connection connection = dbConn.getConnection()) {
-            String query = "SELECT * FROM Users WHERE UserName = ? AND UserPassword = ?";
+            String query = "SELECT * FROM User WHERE username = ? AND userpassword = ?";
             PreparedStatement statement = connection.prepareStatement(query);
             statement.setString(1, username);
             statement.setString(2, password);
