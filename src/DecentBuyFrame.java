@@ -22,6 +22,8 @@ public class DecentBuyFrame extends JFrame{
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(800, 600);
 
+        
+
         add(createTabbedPane(dbConn));
         setVisible(true);
     }
@@ -162,7 +164,14 @@ public class DecentBuyFrame extends JFrame{
         buttonPanel.add(refreshOrdersButton);
 
         JButton addOrderButton = new JButton("Add Order");
-       addOrderButton.addActionListener(e -> openAddOrderDialog(dbConn, ordersTable)); {
+       addOrderButton.addActionListener(e -> {
+        try {
+            new Add_Order_or_Product();
+        } catch (SQLException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+        }
+    }); {
         buttonPanel.add(addOrderButton);
 
         ordersPanel.add(buttonPanel, BorderLayout.SOUTH);
@@ -171,7 +180,7 @@ public class DecentBuyFrame extends JFrame{
         }
     }
 
-    private void openAddOrderDialog(Connection dbConn, JTable ordersTable) {
+    public void openAddOrderDialog(Connection dbConn, JTable ordersTable) {
     // Create a dialog window
     JDialog dialog = new JDialog();
     dialog.setTitle("Add New Order");
@@ -183,7 +192,7 @@ public class DecentBuyFrame extends JFrame{
     JPanel panel = new JPanel();
     panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-    JTextField idDBOField = new JTextField(20);
+    JTextField OrderID = new JTextField(20);
     JTextField DBO_Quantity = new JTextField(20);
     JTextField DBO_Type = new JTextField(20);
     JTextField DBO_Date = new JTextField(20);
@@ -198,10 +207,40 @@ public class DecentBuyFrame extends JFrame{
     } catch (SQLException ex) {
         ex.printStackTrace();
     }
+    JComboBox<String> customerComboBox = new JComboBox<>(); // Populates products
+    try {
+        Statement stmt = dbConn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT concat(customerFirst, customerLast) As Name FROM Customer");
+        while (rs.next()) {
+            customerComboBox.addItem(rs.getString("Name"));
+        }
+    } catch (SQLException ex) {
+        ex.printStackTrace();
+    }
+    JComboBox<String> supplierComboBox = new JComboBox<>(); // Populates products
+    try {
+        Statement stmt = dbConn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT SupplierName FROM Suppliers");
+        while (rs.next()) {
+            supplierComboBox.addItem(rs.getString("productName"));
+        }
+    } catch (SQLException ex) {
+        ex.printStackTrace();
+    }
+
+
+
+
+
+
+
+
 
     // Add fields to the panel
+
+    
     panel.add(new JLabel("Order ID:"));
-    panel.add(idDBOField);
+    panel.add(OrderID);
     panel.add(new JLabel("Date (YYYY-MM-DD):"));
     panel.add(DBO_Date);
     panel.add(new JLabel("Quantity:"));
@@ -210,6 +249,10 @@ public class DecentBuyFrame extends JFrame{
     panel.add(DBO_Type);
     panel.add(new JLabel("Product:"));
     panel.add(itemComboBox);
+    panel.add(new JLabel("Customer Name:"));
+    panel.add(customerComboBox);
+    panel.add(new JLabel("Supplier Name:"));
+    panel.add(supplierComboBox);
 
     // Buttons
     JButton submitButton = new JButton("Submit");
@@ -217,11 +260,13 @@ public class DecentBuyFrame extends JFrame{
 
     // Submit button action
     submitButton.addActionListener(e -> {
-        String id = idDBOField.getText();
+        String id = OrderID.getText();
         String formattedDate = DBO_Date.getText();
         String quantityText = DBO_Quantity.getText();
         String type = DBO_Type.getText();
         String productName = (String) itemComboBox.getSelectedItem();
+        String CustomerName = (String) customerComboBox.getSelectedItem();
+        String SupplierName = (String) supplierComboBox.getSelectedItem();
 
         if (id.isEmpty() || formattedDate.isEmpty() || quantityText.isEmpty() || type.isEmpty() || productName == null) {
             JOptionPane.showMessageDialog(dialog, "All fields must be filled!", "Error", JOptionPane.ERROR_MESSAGE);
@@ -250,7 +295,7 @@ public class DecentBuyFrame extends JFrame{
             double totalCost = price * quantity;
 
             // Insert the new order
-            addOrderToDatabase(dbConn, orderId, formattedDate, quantity, totalCost, "Pending", type);
+           // addOrderToDatabase(dbConn, orderId, formattedDate, quantity, totalCost, "Pending", type);
 
             // Refresh the orders table
             DBDB_OrderData.loadOrdersData(dbConn, ordersTable);
