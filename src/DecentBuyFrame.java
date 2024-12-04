@@ -114,7 +114,7 @@ public class DecentBuyFrame extends JFrame{
         });
         buttonPanel.add(refreshButton);
 
-        JButton editButton = new JButton("Edit Selected Item");
+        JButton editButton = new JButton("Edit Selected Row");
         editButton.addActionListener(e -> {
             int selectedRow = table.getSelectedRow();
             if (selectedRow == -1) {
