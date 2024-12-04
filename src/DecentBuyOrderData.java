@@ -59,9 +59,9 @@ public class DecentBuyOrderData {
 
     public void loadOrdersData(Connection dbConn, JTable table) throws SQLException {
         String selectSQL = "SELECT " +
-                           "    Customer.idCustomer, Customer.customerFirst, Customer.customerLast, " +
-                           "    DBOrder.idDBOrder, DBOrder.DBOrderDate, DBOrder.DBOrderQuantity, DBOrder.DBOrderTotalCost, DBOrderStatus," +
-                           "    Products.idProducts, Products.productName, Products.productPrice " +
+                           "    DBOrder.idDBOrder, CONCAT(Customer.customerFirst, ' ', Customer.customerLast) AS 'Customer Name', " +
+                           "    DBOrder.DBOrderDate, DBOrder.DBOrderQuantity," +
+                           "    Products.productName, Products.productPrice, DBOrder.DBOrderTotalCost, DBOrderStatus " +
                            "FROM DBOrder " +
                            "JOIN Customer ON DBOrder.Customer_idCustomer = Customer.idCustomer " +
                            "JOIN Products ON DBOrder.Products_idProducts = Products.idProducts;";
@@ -69,30 +69,29 @@ public class DecentBuyOrderData {
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
     
         // Define column headers
-        String[] columnNames = {"Customer ID", "Customer First", "Customer Last", 
-                                "Order ID", "Order Date", "Order Quantity", "Order Total Cost",
-                                "Product ID", "Product Name", "Product Price", "Order Status"};
+        String[] columnNames = {"Order ID", "Customer Name",
+                                "Order Date", "Order Quantity",
+                                "Product Name", "Product Price", "Order Total Cost", "Order Status"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
     
         // Process the result set
         while (rs.next()) {
-            int c_ID = rs.getInt("idCustomer");
-            String c_First = rs.getString("customerFirst");
-            String c_Last = rs.getString("customerLast");
-    
             int o_Id = rs.getInt("idDBOrder");
+            String c_First = rs.getString("Customer Name");
+    
+
             String o_Date = rs.getString("DBOrderDate");
             int o_Quantity = rs.getInt("DBOrderQuantity");
-            double o_Cost = rs.getDouble("DBOrderTotalCost");
-            String o_status = rs.getString("DBOrderStatus");
-    
-            int p_ID = rs.getInt("idProducts");
+
+
             String p_Name = rs.getString("productName");
             double p_Price = rs.getDouble("productPrice");
+            double o_Cost = rs.getDouble("DBOrderTotalCost");
+            String o_status = rs.getString("DBOrderStatus");
 
     
             // Add row to the table model
-            Object[] row = {c_ID, c_First, c_Last, o_Id, o_Date, o_Quantity, o_Cost, o_status, p_ID, p_Name, p_Price};
+            Object[] row = {o_Id, c_First, o_Date, o_Quantity, p_Name, p_Price, o_Cost, o_status};
             model.addRow(row);
         }
     
@@ -141,11 +140,11 @@ public class DecentBuyOrderData {
         // Map user-friendly search criteria to database columns
         Map<String, String> searchMapping = Map.of(
                 "Order ID", "idDBOrder",
-                "Order Date", "DBOrderDate",
                 "Customer First Name", "customerFirst",
                 "Customer Last Name", "customerLast",
-                "Order Status", "DBOrderStatus",
-                "Product Name", "productName"
+                "Order Date", "DBOrderDate",
+                "Product Name", "productName",
+                "Order Status", "DBOrderStatus"
         );
 
         // Check if the search criterion is valid
@@ -156,13 +155,14 @@ public class DecentBuyOrderData {
         // Base query setup
         String baseQuery = """
         SELECT 
-            DBOrder.idDBOrder AS 'Order ID', 
-            DBOrder.DBOrderDate AS 'Order Date', 
-            DBOrder.DBOrderStatus AS 'Order Status',
-            Customer.idCustomer AS 'Customer ID',
-            Customer.customerFirst AS 'Customer First',
-            Customer.customerLast AS 'Customer Last',
-            Products.productName AS 'Product Name'
+            DBOrder.idDBOrder AS 'Order ID',
+            CONCAT(Customer.customerFirst, ' ', Customer.customerLast) AS 'Customer Name',
+            DBOrder.DBOrderDate AS 'Order Date',  
+            DBOrder.DBOrderQuantity AS 'Quantity',
+            Products.productName AS 'Product Name',
+            Products.productPrice AS 'Price',
+            DBOrder.DBOrderTotalCost AS 'Total Cost',
+            DBOrder.DBOrderStatus AS 'Order Status'
         FROM DBOrder
         LEFT JOIN Customer ON DBOrder.Customer_idCustomer = Customer.idCustomer
         LEFT JOIN Products ON DBOrder.Products_idProducts = Products.idProducts
@@ -179,19 +179,21 @@ public class DecentBuyOrderData {
 
             try (ResultSet rs = pstmt.executeQuery()) {
                 // Define the columns to display
-                String[] columnNames = {"Order ID", "Order Date", "Order Status", "Customer ID", "Customer First", "Customer Last", "Product Name"};
+                String[] columnNames = {"Order ID", "Customer Name", "Order Date", "Quantity", "Product Name", "Price", "Total Cost", "Order Status"};
                 DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
                 // Populate table rows
                 while (rs.next()) {
                     Object[] row = new Object[columnNames.length];
                     row[0] = rs.getInt("Order ID");
+                    row[2] = rs.getInt("Customer Name");
                     row[1] = rs.getString("Order Date");
-                    row[2] = rs.getString("Order Status");
-                    row[3] = rs.getInt("Customer ID");
-                    row[4] = rs.getString("Customer First");
-                    row[5] = rs.getString("Customer Last");
-                    row[6] = rs.getString("Product Name");
+                    row[3] = rs.getInt("Quantity");
+                    row[4] = rs.getInt("Product Name");
+                    row[5] = rs.getInt("Price");
+                    row[6] = rs.getInt("Total Price");
+                    row[7] = rs.getInt("Status");
+
                     model.addRow(row);
                 }
 
@@ -200,7 +202,6 @@ public class DecentBuyOrderData {
             }
         }
     }
-
 
     public void updateProductInDatabase(Connection dbConn, Object id, String name, String category,
                                         String brand, double price, int stock) throws SQLException {

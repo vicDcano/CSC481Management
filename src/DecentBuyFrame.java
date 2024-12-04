@@ -102,22 +102,34 @@ public class DecentBuyFrame extends JFrame{
         searchPanel.add(searchButton);
         return searchPanel;
     }
-
     public JPanel createOrderSearchPanel(Connection dbConn, JTable table) {
         JPanel searchPanel = new JPanel();
 
-        // Define user-friendly search options and map them to actual column names
-        String[] searchOptions = {"Order ID", "Order Date", "Customer First Name","Customer last Name", "Order Status", "Product Name"};
+        DecentBuyOrderData orderData = new DecentBuyOrderData();
+
+        // Define user-friendly search options
+        String[] searchOptions = {"Order ID", "Order Date", "Customer First Name", "Customer Last Name", "Order Status", "Product Name"};
         JComboBox<String> searchDropdown = new JComboBox<>(searchOptions);
         JTextField searchTextField = new JTextField(15);
         JButton searchButton = new JButton("Search");
 
         searchButton.addActionListener(e -> {
+            String searchInput = searchTextField.getText();
+            String searchCriterion = (String) searchDropdown.getSelectedItem();
+
+            if (searchInput.isEmpty()) {
+                JOptionPane.showMessageDialog(null, "Please enter a search query.");
+                return;
+            }
+
             try {
-                String selectedSearchCriterion = searchDropdown.getSelectedItem().toString();
-                DBDB_OrderData.searchBarOrder(dbConn, table, selectedSearchCriterion, searchTextField.getText());
+                // Call the existing searchBarOrder function
+                orderData.searchBarOrder(dbConn, table, searchCriterion, searchInput);
             } catch (SQLException ex) {
                 ex.printStackTrace();
+                JOptionPane.showMessageDialog(null, "Error searching for data: " + ex.getMessage());
+            } catch (IllegalArgumentException ex) {
+                JOptionPane.showMessageDialog(null, ex.getMessage());
             }
         });
 
