@@ -15,9 +15,13 @@ import java.text.DateFormat;
 import java.time.LocalDate;
 import java.time.format.*;
 
+
 // import com.formdev.flatlaf.FlatDarculaLaf;
 
 
+
+
+import java.util.*;
 
 
 
@@ -99,6 +103,7 @@ public class DecentBuyFrame extends JFrame{
     public JPanel createSearchPanel(Connection dbConn, JTable table) {
         JPanel searchPanel = new JPanel();
 
+
         //searchPanel.setBackground(Color.DARK_GRAY);
         searchPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
@@ -122,8 +127,39 @@ public class DecentBuyFrame extends JFrame{
 
         searchButton.addActionListener(e -> {
 
+        // Use LinkedHashMap to maintain insertion order
+        Map<String, String> columnMapping = new LinkedHashMap<>();
+        columnMapping.put("idProducts", "ID");
+        columnMapping.put("productName", "Name");
+        columnMapping.put("productCategory", "Category");
+        columnMapping.put("productBrand", "Brand");
+        columnMapping.put("productPrice", "Price");
+        columnMapping.put("productStock", "Stock");
+
+        // Extract the user-friendly names for the dropdown in order
+        List<String> userFriendlyNames = new ArrayList<>(columnMapping.values());
+        JComboBox<String> searchDropdown = new JComboBox<>(userFriendlyNames.toArray(new String[0]));
+
+        JTextField searchTextField = new JTextField(15);
+        JButton searchButton = new JButton("Search");
+
+        // Create instance of DecentBuyOrderData to call searchBarInventory
+        DecentBuyOrderData orderData = new DecentBuyOrderData();
+
+
+        searchButton.addActionListener(e -> {
             try {
-                DBDB_OrderData.searchBarInventory(dbConn, table, searchDropdown.getSelectedItem().toString(), searchTextField.getText());
+                // Map user-friendly name back to database column
+                String selectedName = (String) searchDropdown.getSelectedItem();
+                String searchCriterion = columnMapping.entrySet()
+                        .stream()
+                        .filter(entry -> entry.getValue().equals(selectedName))
+                        .findFirst()
+                        .map(Map.Entry::getKey)
+                        .orElseThrow(() -> new IllegalArgumentException("Invalid Selection"));
+
+                // Perform the search
+                orderData.searchBarInventory(dbConn, table, searchCriterion, searchTextField.getText());
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
@@ -134,9 +170,9 @@ public class DecentBuyFrame extends JFrame{
         searchPanel.add(searchButton);
         return searchPanel;
     }
-
     public JPanel createOrderSearchPanel(Connection dbConn, JTable table) {
         JPanel searchPanel = new JPanel();
+
 
         searchPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
@@ -153,17 +189,34 @@ public class DecentBuyFrame extends JFrame{
         styleButton(searchButton, primaryColor, secondaryColor);
 
         String[] searchOptions = {"idDBOrder", "Current", "Pending", "Cancelled", "Customer", "Supplier"};
+
+        DecentBuyOrderData orderData = new DecentBuyOrderData();
+
+        // Define user-friendly search options
+        String[] searchOptions = {"Order ID", "Order Date", "Customer First Name", "Customer Last Name", "Order Status", "Product Name"};
+
         JComboBox<String> searchDropdown = new JComboBox<>(searchOptions);
         JTextField searchTextField = new JTextField(15);
         JButton searchButton = new JButton("Search");
 
 
         searchButton.addActionListener(e -> {
+            String searchInput = searchTextField.getText();
+            String searchCriterion = (String) searchDropdown.getSelectedItem();
+
+            if (searchInput.isEmpty()) {
+                JOptionPane.showMessageDialog(null, "Please enter a search query.");
+                return;
+            }
 
             try {
-                DBDB_OrderData.searchBarInventory(dbConn, table, searchDropdown.getSelectedItem().toString(), searchTextField.getText());
+                // Call the existing searchBarOrder function
+                orderData.searchBarOrder(dbConn, table, searchCriterion, searchInput);
             } catch (SQLException ex) {
                 ex.printStackTrace();
+                JOptionPane.showMessageDialog(null, "Error searching for data: " + ex.getMessage());
+            } catch (IllegalArgumentException ex) {
+                JOptionPane.showMessageDialog(null, ex.getMessage());
             }
         });
 
@@ -172,6 +225,7 @@ public class DecentBuyFrame extends JFrame{
         searchPanel.add(searchButton);
         return searchPanel;
     }
+
 
     public JPanel createInventoryButtonPanel(Connection dbConn, JTable table) {
         JPanel buttonPanel = new JPanel();
@@ -186,9 +240,13 @@ public class DecentBuyFrame extends JFrame{
         });
         buttonPanel.add(refreshButton);
 
+
         JButton editButton = new JButton("Edit Product");
 
         JButton editButton = new JButton("Edit Selected Row");
+
+
+        JButton editButton = new JButton("Edit Selected Item");
 
         editButton.addActionListener(e -> {
             int selectedRow = table.getSelectedRow();

@@ -85,9 +85,9 @@ public class DecentBuyOrderData {
 
     public void loadOrdersData(Connection dbConn, JTable table) throws SQLException {
         String selectSQL = "SELECT " +
-                           "    Customer.idCustomer, Customer.customerFirst, Customer.customerLast, " +
-                           "    DBOrder.idDBOrder, DBOrder.DBOrderDate, DBOrder.DBOrderQuantity, DBOrder.DBOrderTotalCost, DBOrderStatus," +
-                           "    Products.idProducts, Products.productName, Products.productPrice " +
+                           "    DBOrder.idDBOrder, CONCAT(Customer.customerFirst, ' ', Customer.customerLast) AS 'Customer Name', " +
+                           "    DBOrder.DBOrderDate, DBOrder.DBOrderQuantity," +
+                           "    Products.productName, Products.productPrice, DBOrder.DBOrderTotalCost, DBOrderStatus " +
                            "FROM DBOrder " +
                            "JOIN Customer ON DBOrder.Customer_idCustomer = Customer.idCustomer " +
                            "JOIN Products ON DBOrder.Products_idProducts = Products.idProducts;";
@@ -95,53 +95,54 @@ public class DecentBuyOrderData {
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
     
         // Define column headers
-        String[] columnNames = {"Customer ID", "Customer First", "Customer Last", 
-                                "Order ID", "Order Date", "Order Quantity", "Order Total Cost",
-                                "Product ID", "Product Name", "Product Price", "Order Status"};
+        String[] columnNames = {"Order ID", "Customer Name",
+                                "Order Date", "Order Quantity",
+                                "Product Name", "Product Price", "Order Total Cost", "Order Status"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
     
         // Process the result set
         while (rs.next()) {
-            int c_ID = rs.getInt("idCustomer");
-            String c_First = rs.getString("customerFirst");
-            String c_Last = rs.getString("customerLast");
-    
             int o_Id = rs.getInt("idDBOrder");
+            String c_First = rs.getString("Customer Name");
+    
+
             String o_Date = rs.getString("DBOrderDate");
             int o_Quantity = rs.getInt("DBOrderQuantity");
-            double o_Cost = rs.getDouble("DBOrderTotalCost");
-            String o_status = rs.getString("DBOrderStatus");
-    
-            int p_ID = rs.getInt("idProducts");
+
+
             String p_Name = rs.getString("productName");
             double p_Price = rs.getDouble("productPrice");
+            double o_Cost = rs.getDouble("DBOrderTotalCost");
+            String o_status = rs.getString("DBOrderStatus");
 
     
             // Add row to the table model
-            Object[] row = {c_ID, c_First, c_Last, o_Id, o_Date, o_Quantity, o_Cost, o_status, p_ID, p_Name, p_Price};
+            Object[] row = {o_Id, c_First, o_Date, o_Quantity, p_Name, p_Price, o_Cost, o_status};
             model.addRow(row);
         }
     
         // Set the model for the JTable
         table.setModel(model);
     }
-    
-    public void searchBarInventory(Connection dbConn, JTable table, String searchCriterion, String searchInput) throws SQLException
-    {
-        Set<String> alloweCriteria = Set.of("idProducts", "productName", "productCategory",
-                                            "productBrand", "productPrice", "productStock");
-        if(!alloweCriteria.contains(searchCriterion)) {
-            throw new IllegalArgumentException("Invalid Search Criteria");
-        }
-        String searchColumn = searchCriterion;  // Default search by item name
 
-        // SQL query with parameterized search
+    public void searchBarInventory(Connection dbConn, JTable table, String searchCriterion, String searchInput) throws SQLException {
+        // Allowed search criteria
+        Set<String> allowedCriteria = Set.of("idProducts", "productName", "productCategory", "productBrand", "productPrice", "productStock");
+
+        // Debugging: Print the selected search criterion
+        System.out.println("Selected search criterion: " + searchCriterion);
+
+        if (!allowedCriteria.contains(searchCriterion)) {
+            throw new IllegalArgumentException("Invalid Search Criterion: " + searchCriterion);
+        }
+
+        String searchColumn = searchCriterion;  // Use the passed criterion directly
+
         String searchSQL = "SELECT * FROM Products WHERE " + searchColumn + " LIKE ?";
         try (PreparedStatement pstmt = dbConn.prepareStatement(searchSQL)) {
             pstmt.setString(1, "%" + searchInput + "%");  // Use wildcards for partial matches
             try (ResultSet rs = pstmt.executeQuery()) {
-                // Extract data and update the table model
-                String[] columnNames = {"idProducts", "productName", "productCategory", "productBrand", "productPrice", "productStock"};
+                String[] columnNames = {"Product ID", "Product Name", "Category", "Brand", "Price", "Quantity"};
                 DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
                 while (rs.next()) {
@@ -149,63 +150,84 @@ public class DecentBuyOrderData {
                     String itemName = rs.getString("productName");
                     String category = rs.getString("productCategory");
                     String brand = rs.getString("productBrand");
-                    //double price = rs.getDouble("ProductsPrice");
-                    String Price = String.format("$%.2f", rs.getDouble("productPrice"));
-
+                    String price = String.format("$%.2f", rs.getDouble("productPrice"));
                     String quantity = String.valueOf(rs.getInt("productStock"));
-                    Object[] row = {ID, itemName, category, brand, Price, quantity};
+
+                    Object[] row = {ID, itemName, category, brand, price, quantity};
                     model.addRow(row);
                 }
 
-                // set model to table
                 table.setModel(model);
             }
         }
     }
 
-    public void orderSearchBar(Connection dbConn, JTable table, String searchCriterion, String searchInput) throws SQLException {
-        // Validate search criterion to prevent SQL injection
-        String[] validCriteria = {"idDBOrder", "DBOrderDate", "DBOrderQuantity", "DBOrderTotalCost", "DBOrderStatus", "DBOrderType"};
-        boolean isValidCriterion = false;
+    public void searchBarOrder(Connection dbConn, JTable table, String searchCriterion, String searchInput) throws SQLException {
+        // Map user-friendly search criteria to database columns
+        Map<String, String> searchMapping = Map.of(
+                "Order ID", "idDBOrder",
+                "Customer First Name", "customerFirst",
+                "Customer Last Name", "customerLast",
+                "Order Date", "DBOrderDate",
+                "Product Name", "productName",
+                "Order Status", "DBOrderStatus"
+        );
 
-        for (String criterion : validCriteria) {
-            if (criterion.equals(searchCriterion)) {
-                isValidCriterion = true;
-                break;
-            }
+        // Check if the search criterion is valid
+        if (!searchMapping.containsKey(searchCriterion)) {
+            throw new IllegalArgumentException("Invalid Search Criterion: " + searchCriterion);
         }
 
-        if (!isValidCriterion) {
-            throw new SQLException("Invalid search criterion: " + searchCriterion);
-        }
+        // Base query setup
+        String baseQuery = """
+        SELECT 
+            DBOrder.idDBOrder AS 'Order ID',
+            CONCAT(Customer.customerFirst, ' ', Customer.customerLast) AS 'Customer Name',
+            DBOrder.DBOrderDate AS 'Order Date',  
+            DBOrder.DBOrderQuantity AS 'Quantity',
+            Products.productName AS 'Product Name',
+            Products.productPrice AS 'Price',
+            DBOrder.DBOrderTotalCost AS 'Total Cost',
+            DBOrder.DBOrderStatus AS 'Order Status'
+        FROM DBOrder
+        LEFT JOIN Customer ON DBOrder.Customer_idCustomer = Customer.idCustomer
+        LEFT JOIN Products ON DBOrder.Products_idProducts = Products.idProducts
+    """;
 
-        // SQL query with parameterized search
-        String searchSQL = "SELECT * FROM DBOrder WHERE " + searchCriterion + " LIKE ?";
-        try (PreparedStatement pstmt = dbConn.prepareStatement(searchSQL)) {
-            pstmt.setString(1, "%" + searchInput + "%"); // Use wildcards for partial matches
-            ResultSet rs = pstmt.executeQuery();
+        // Identify the database column to search
+        String searchColumn = searchMapping.get(searchCriterion);
 
-            // Extract data and update the table model
-            String[] columnNames = {"Order ID", "Order Date", "Order Quantity", "Order Total", "Order Status", "Order Type"};
-            DefaultTableModel model = new DefaultTableModel(columnNames, 0);
+        // Add WHERE clause for the search
+        String searchQuery = baseQuery + " WHERE " + searchColumn + " LIKE ?";
 
-            while (rs.next()) {
-                int orderId = rs.getInt("idDBOrder");
-                String orderDate = rs.getString("DBOrderDate");
-                int orderQuantity = rs.getInt("DBOrderQuantity");
-                double totalCost = rs.getDouble("DBOrderTotalCost");
-                String status = rs.getString("DBOrderStatus");
-                String type = rs.getString("DBOrderType");
+        try (PreparedStatement pstmt = dbConn.prepareStatement(searchQuery)) {
+            pstmt.setString(1, "%" + searchInput + "%");
 
-                Object[] row = {orderId, orderDate, orderQuantity, String.format("$%.2f", totalCost), status, type};
-                model.addRow(row);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                // Define the columns to display
+                String[] columnNames = {"Order ID", "Customer Name", "Order Date", "Quantity", "Product Name", "Price", "Total Cost", "Order Status"};
+                DefaultTableModel model = new DefaultTableModel(columnNames, 0);
+
+                // Populate table rows
+                while (rs.next()) {
+                    Object[] row = new Object[columnNames.length];
+                    row[0] = rs.getInt("Order ID");
+                    row[2] = rs.getInt("Customer Name");
+                    row[1] = rs.getString("Order Date");
+                    row[3] = rs.getInt("Quantity");
+                    row[4] = rs.getInt("Product Name");
+                    row[5] = rs.getInt("Price");
+                    row[6] = rs.getInt("Total Price");
+                    row[7] = rs.getInt("Status");
+
+                    model.addRow(row);
+                }
+
+                // Update table with the new model
+                table.setModel(model);
             }
-
-            // Set model to table
-            table.setModel(model);
         }
     }
-
 
     public void updateProductInDatabase(Connection dbConn, Object id, String name, String category,
                                         String brand, double price, int stock) throws SQLException {
