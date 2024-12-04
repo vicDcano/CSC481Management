@@ -10,26 +10,25 @@ import java.time.LocalDate;
 public class DecentBuyOrderData {
     LocalDate currentDate = LocalDate.now();
 
-    public void generateRandomOrder(Connection dbConn) throws SQLException {
-        // select a random item from the inventory where quantity > 0
-        String selectSQL = "SELECT id, item_name, quantity FROM Inventory WHERE quantity > 0 ORDER BY RAND() LIMIT 1";
-        ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
+    public void addProduct(Connection dbConn, String name, String category, String brand, double price, int stock) throws SQLException {
+        String insertSQL = "INSERT INTO Products (productName, productDesc, productPrice, productStock, productBrand, productCategory) VALUES (?, ?, ?, ?, ?, ?)";
 
-        if (rs.next()) {
-            int itemId = rs.getInt("id");
-            String itemName = rs.getString("item_name");
-            // reduce the quantity by 1
-            String updateSQL = "UPDATE Inventory SET quantity = quantity - 1 WHERE id = " + itemId;
-            dbConn.createStatement().executeUpdate(updateSQL);
+        try (PreparedStatement pstmt = dbConn.prepareStatement(insertSQL)) {
+            pstmt.setString(1, name);
+            pstmt.setString(2, ""); // Assuming productDesc is optional or can be added later
+            pstmt.setDouble(3, price);
+            pstmt.setInt(4, stock);
+            pstmt.setString(5, brand);
+            pstmt.setString(6, category);
 
-            // insert the generated order into PendingOrders
-            String insertOrderSQL = "INSERT INTO PendingOrders (item_name, quantity) VALUES ('" + itemName + "', 1)";
-            dbConn.createStatement().executeUpdate(insertOrderSQL);
-
-            System.out.println("Order for " + itemName + " has been generated.");
-        } else {
-            System.out.println("No items available in inventory to generate an order.");
+            int rowsInserted = pstmt.executeUpdate();
+            if (rowsInserted > 0) {
+                System.out.println("Product added successfully.");
+            } else {
+                System.out.println("Failed to add the product.");
+            }
         }
+
     }
 
     public void loadInventoryData(Connection dbConn, JTable table) throws SQLException {
