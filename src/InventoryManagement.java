@@ -3,16 +3,22 @@ import javax.swing.*;
 //import java.awt.*;
 //import java.sql.*;
 
+import com.formdev.flatlaf.FlatDarculaLaf;
+
+
 public class InventoryManagement {
     DatabaseConn dbconn = new DatabaseConn();
     //DecentBuyFrame DBDBFrame = new DecentBuyFrame();
     public static void main(String[] args)
     {
         try {
-            SwingUtilities.invokeLater(() -> new DBLogin());
-        } catch (Exception e) {
+            UIManager.setLookAndFeel(new FlatDarculaLaf());
+        } catch (UnsupportedLookAndFeelException e) {
             e.printStackTrace();
         }
+
+        // 2. Launch the Login Window
+        SwingUtilities.invokeLater(() -> new DBLogin());
     }
 }
 
