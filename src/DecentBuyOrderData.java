@@ -61,46 +61,48 @@ public class DecentBuyOrderData {
     }
 
     public void loadOrdersData(Connection dbConn, JTable table) throws SQLException {
-        String selectSQL = "SELECT " +
-                           "    DBOrder.idDBOrder, CONCAT(Customer.customerFirst, ' ', Customer.customerLast) AS 'Customer Name', " +
-                           "    DBOrder.DBOrderDate, DBOrder.DBOrderQuantity," +
-                           "    Products.productName, Products.productPrice, DBOrder.DBOrderTotalCost, DBOrderStatus " +
-                           "FROM DBOrder " +
-                           "JOIN Customer ON DBOrder.Customer_idCustomer = Customer.idCustomer " +
-                           "JOIN Products ON DBOrder.Products_idProducts = Products.idProducts;";
+        String selectSQL = """
+        SELECT 
+            DBOrder.idDBOrder, 
+            IFNULL(CONCAT(Customer.customerFirst, ' ', Customer.customerLast), Supplier.supplierName) AS 'Name',
+            DBOrder.DBOrderDate, 
+            DBOrder.DBOrderQuantity,
+            Products.productName, 
+            Products.productPrice, 
+            DBOrder.DBOrderTotalCost, 
+            DBOrder.DBOrderStatus 
+        FROM DBOrder 
+        LEFT JOIN Customer ON DBOrder.Customer_idCustomer = Customer.idCustomer 
+        LEFT JOIN Supplier ON DBOrder.Supplier_idSupplier = Supplier.idSupplier 
+        LEFT JOIN Products ON DBOrder.Products_idProducts = Products.idProducts;
+    """;
 
         ResultSet rs = dbConn.createStatement().executeQuery(selectSQL);
 
         // Define column headers
-        String[] columnNames = {"Order ID", "Customer Name",
-                                "Order Date", "Order Quantity",
-                                "Product Name", "Product Price", "Order Total Cost", "Order Status"};
+        String[] columnNames = {"Order ID", "Name", "Order Date", "Order Quantity", "Product Name", "Product Price", "Order Total Cost", "Order Status"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
         // Process the result set
         while (rs.next()) {
-            int o_Id = rs.getInt("idDBOrder");
-            String c_First = rs.getString("Customer Name");
-
-
-            String o_Date = rs.getString("DBOrderDate");
-            int o_Quantity = rs.getInt("DBOrderQuantity");
-
-
-            String p_Name = rs.getString("productName");
-            double p_Price = rs.getDouble("productPrice");
-            double o_Cost = rs.getDouble("DBOrderTotalCost");
-            String o_status = rs.getString("DBOrderStatus");
-
+            int orderId = rs.getInt("idDBOrder");
+            String name = rs.getString("Name");
+            String orderDate = rs.getString("DBOrderDate");
+            int orderQuantity = rs.getInt("DBOrderQuantity");
+            String productName = rs.getString("productName");
+            double productPrice = rs.getDouble("productPrice");
+            double orderCost = rs.getDouble("DBOrderTotalCost");
+            String orderStatus = rs.getString("DBOrderStatus");
 
             // Add row to the table model
-            Object[] row = {o_Id, c_First, o_Date, o_Quantity, p_Name, p_Price, o_Cost, o_status};
+            Object[] row = {orderId, name, orderDate, orderQuantity, productName, productPrice, orderCost, orderStatus};
             model.addRow(row);
         }
 
         // Set the model for the JTable
         table.setModel(model);
     }
+
 
     public void searchBarInventory(Connection dbConn, JTable table, String searchCriterion, String searchInput) throws SQLException {
         // Allowed search criteria
@@ -141,14 +143,14 @@ public class DecentBuyOrderData {
     }
 
     public void searchBarOrder(Connection dbConn, JTable table, String searchCriterion, String searchInput) throws SQLException {
-        // Map user-friendly search criteria to database columns
         Map<String, String> searchMapping = Map.of(
                 "Order ID", "idDBOrder",
                 "Customer First Name", "customerFirst",
                 "Customer Last Name", "customerLast",
                 "Order Date", "DBOrderDate",
                 "Product Name", "productName",
-                "Order Status", "DBOrderStatus"
+                "Order Status", "DBOrderStatus",
+                "Supplier", "supplierName"  // New entry for supplier
         );
 
         // Check if the search criterion is valid
@@ -160,7 +162,7 @@ public class DecentBuyOrderData {
         String baseQuery = """
         SELECT 
             DBOrder.idDBOrder AS 'Order ID',
-            CONCAT(Customer.customerFirst, ' ', Customer.customerLast) AS 'Customer Name',
+            CONCAT(Customer.customerFirst, ' ', Customer.customerLast) AS 'Name',
             DBOrder.DBOrderDate AS 'Order Date',  
             DBOrder.DBOrderQuantity AS 'Order Quantity',
             Products.productName AS 'Product Name',
@@ -183,14 +185,14 @@ public class DecentBuyOrderData {
 
             try (ResultSet rs = pstmt.executeQuery()) {
                 // Define the columns to display
-                String[] columnNames = {"Order ID", "Customer Name", "Order Date", "Order Quantity", "Product Name", " Product Price", "Total Cost", "Order Status"};
+                String[] columnNames = {"Order ID", "Name", "Order Date", "Order Quantity", "Product Name", " Product Price", "Total Cost", "Order Status"};
                 DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
                 // Populate table rows
                 while (rs.next()) {
                     Object[] row = new Object[columnNames.length];
                     row[0] = rs.getInt("Order ID");
-                    row[1] = rs.getString("Customer Name");
+                    row[1] = rs.getString("Name");
                     row[2] = rs.getString("Order Date");
                     row[3] = rs.getInt("Order Quantity");
                     row[4] = rs.getString("Product Name");
@@ -231,23 +233,58 @@ public class DecentBuyOrderData {
 
     public void saveEditedOrder(Connection dbConn, int orderId, String firstName, String lastName, String orderDate,
                                 int quantity, String productName, double productPrice, double totalCost, String orderStatus) throws SQLException {
-        String updateSQL = "UPDATE DBOrder SET " +
-                "customerFirst = ?, customerLast = ?, DBOrderDate = ?, DBOrderQuantity = ?, " +
-                "productName = ?, productPrice = ?, DBOrderTotalCost = ?, DBOrderStatus = ? " +
+        // SQL queries
+        String updateCustomerSQL = "UPDATE Customer " +
+                "SET customerFirst = ?, customerLast = ? " +
+                "WHERE idCustomer = (SELECT Customer_idCustomer FROM DBOrder WHERE idDBOrder = ?)";
+
+        String updateOrderSQL = "UPDATE DBOrder SET " +
+                "DBOrderDate = ?, DBOrderQuantity = ?, DBOrderTotalCost = ?, DBOrderStatus = ? " +
                 "WHERE idDBOrder = ?";
 
-        try (PreparedStatement ps = dbConn.prepareStatement(updateSQL)) {
-            ps.setString(1, firstName); // Set the first name
-            ps.setString(2, lastName);  // Set the last name
-            ps.setString(3, orderDate);
-            ps.setInt(4, quantity);
-            ps.setString(5, productName);
-            ps.setDouble(6, productPrice);
-            ps.setDouble(7, totalCost);
-            ps.setString(8, orderStatus);
-            ps.setInt(9, orderId);
-            ps.executeUpdate();
+        String updateProductSQL = "UPDATE Products " +
+                "SET productName = ?, productPrice = ? " +
+                "WHERE idProducts = (SELECT Products_idProducts FROM DBOrder WHERE idDBOrder = ?)";
+
+        try {
+            // Begin transaction
+            dbConn.setAutoCommit(false);
+
+            // Update customer details
+            try (PreparedStatement psCustomer = dbConn.prepareStatement(updateCustomerSQL)) {
+                psCustomer.setString(1, firstName);  // Update first name
+                psCustomer.setString(2, lastName);   // Update last name
+                psCustomer.setInt(3, orderId);       // Update only the customer linked to the specific order
+                psCustomer.executeUpdate();
+            }
+
+            // Update order details
+            try (PreparedStatement psOrder = dbConn.prepareStatement(updateOrderSQL)) {
+                psOrder.setString(1, orderDate);
+                psOrder.setInt(2, quantity);
+                psOrder.setDouble(3, totalCost);
+                psOrder.setString(4, orderStatus);
+                psOrder.setInt(5, orderId);          // Update the specific order
+                psOrder.executeUpdate();
+            }
+
+            // Update product details
+            try (PreparedStatement psProduct = dbConn.prepareStatement(updateProductSQL)) {
+                psProduct.setString(1, productName);
+                psProduct.setDouble(2, productPrice);
+                psProduct.setInt(3, orderId);        // Update the product associated with the specific order
+                psProduct.executeUpdate();
+            }
+
+            // Commit transaction
+            dbConn.commit();
+        } catch (SQLException ex) {
+            dbConn.rollback(); // Rollback if an error occurs
+            throw ex;
+        } finally {
+            dbConn.setAutoCommit(true);
         }
     }
+
 
 }

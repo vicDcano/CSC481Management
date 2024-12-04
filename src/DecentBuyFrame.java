@@ -387,7 +387,7 @@ public class DecentBuyFrame extends JFrame{
 
 
     private void updateInventoryQuantities(Connection dbConn) throws SQLException {
-        String updateInventorySQL = 
+        String updateInventorySQL =
                 "UPDATE Products AS inventory " +
                 "JOIN " +
                     "(SELECT ProductsName, SUM(ProductsStock) AS total_ordered " +
@@ -402,7 +402,7 @@ public class DecentBuyFrame extends JFrame{
             System.out.println(rowsUpdated + " inventory items updated based on pending orders.");
         }
 
-        String markedProcessedSQL = 
+        String markedProcessedSQL =
             "UPDATE DBOrder SET processed = TRUE WHERE processed = FALSE";
         try (PreparedStatement pstmt = dbConn.prepareStatement(markedProcessedSQL)) {
             pstmt.executeUpdate();
@@ -641,7 +641,8 @@ public class DecentBuyFrame extends JFrame{
     }
 }
 
-    private void openEditOrderDialog(Connection dbConn, int selectedRow, JTable ordersTable) {
+    private void openEditOrderDialog(Connection dbConn, int selectedRow, JTable ordersTable)
+    {
 
         // Get the selected order data
         int orderId = (int) ordersTable.getValueAt(selectedRow, 0);
@@ -664,7 +665,7 @@ public class DecentBuyFrame extends JFrame{
         editDialog.setSize(400, 300);
         editDialog.setLocationRelativeTo(null);
 
-        // Create text fields for editing
+        // Create textfields for editing
         JTextField firstNameField = new JTextField(firstName);
         JTextField lastNameField = new JTextField(lastName);
         JTextField orderDateField = new JTextField(orderDate);
@@ -678,8 +679,31 @@ public class DecentBuyFrame extends JFrame{
         JButton saveButton = new JButton("Save");
         JButton cancelButton = new JButton("Cancel");
 
-        // Set up a layout for the dialog content (using null layout and absolute positioning)
+        saveButton.setBounds(150, 250, 95, 30);
+        cancelButton.setBounds(255, 250, 95, 30);
+
         editDialog.setLayout(null);  // No layout manager, absolute positioning
+
+        // Create labels
+        JLabel firstNameLabel = new JLabel("First Name:");
+        JLabel lastNameLabel = new JLabel("Last Name:");
+        JLabel orderDateLabel = new JLabel("Order Date:");
+        JLabel quantityLabel = new JLabel("Quantity:");
+        JLabel productNameLabel = new JLabel("Product Name:");
+        JLabel productPriceLabel = new JLabel("Product Price:");
+        JLabel totalCostLabel = new JLabel("Total Cost:");
+        JLabel orderStatusLabel = new JLabel("Order Status:");
+
+        // Position labels and textfields
+        firstNameLabel.setBounds(30, 10, 100, 25);
+        lastNameLabel.setBounds(30, 40, 100, 25);
+        orderDateLabel.setBounds(30, 70, 100, 25);
+        quantityLabel.setBounds(30, 100, 100, 25);
+        productNameLabel.setBounds(30, 130, 100, 25);
+        productPriceLabel.setBounds(30, 160, 100, 25);
+        totalCostLabel.setBounds(30, 190, 100, 25);
+        orderStatusLabel.setBounds(30, 220, 100, 25);
+
         firstNameField.setBounds(150, 10, 200, 25);
         lastNameField.setBounds(150, 40, 200, 25);
         orderDateField.setBounds(150, 70, 200, 25);
@@ -692,7 +716,17 @@ public class DecentBuyFrame extends JFrame{
         saveButton.setBounds(150, 250, 95, 30);
         cancelButton.setBounds(255, 250, 95, 30);
 
-        // Add components to the dialog
+        // Add labels next to the textfield
+        editDialog.add(firstNameLabel);
+        editDialog.add(lastNameLabel);
+        editDialog.add(orderDateLabel);
+        editDialog.add(quantityLabel);
+        editDialog.add(productNameLabel);
+        editDialog.add(productPriceLabel);
+        editDialog.add(totalCostLabel);
+        editDialog.add(orderStatusLabel);
+
+        // Add textfields
         editDialog.add(firstNameField);
         editDialog.add(lastNameField);
         editDialog.add(orderDateField);
