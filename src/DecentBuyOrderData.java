@@ -60,7 +60,7 @@ public class DecentBuyOrderData {
     public void loadOrdersData(Connection dbConn, JTable table) throws SQLException {
         String selectSQL = "SELECT " +
                            "    Customer.idCustomer, Customer.customerFirst, Customer.customerLast, " +
-                           "    DBOrder.idDBOrder, DBOrder.DBOrderDate, DBOrder.DBOrderQuantity, DBOrder.DBOrderTotalCost, " +
+                           "    DBOrder.idDBOrder, DBOrder.DBOrderDate, DBOrder.DBOrderQuantity, DBOrder.DBOrderTotalCost, DBOrderStatus," +
                            "    Products.idProducts, Products.productName, Products.productPrice " +
                            "FROM DBOrder " +
                            "JOIN Customer ON DBOrder.Customer_idCustomer = Customer.idCustomer " +
@@ -70,8 +70,8 @@ public class DecentBuyOrderData {
     
         // Define column headers
         String[] columnNames = {"Customer ID", "Customer First", "Customer Last", 
-                                "Order ID", "Order Date", "Order Quantity", "Order Total Cost", 
-                                "Product ID", "Product Name", "Product Price"};
+                                "Order ID", "Order Date", "Order Quantity", "Order Total Cost",
+                                "Product ID", "Product Name", "Product Price", "Order Status"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
     
         // Process the result set
@@ -84,13 +84,15 @@ public class DecentBuyOrderData {
             String o_Date = rs.getString("DBOrderDate");
             int o_Quantity = rs.getInt("DBOrderQuantity");
             double o_Cost = rs.getDouble("DBOrderTotalCost");
+            String o_status = rs.getString("DBOrderStatus");
     
             int p_ID = rs.getInt("idProducts");
             String p_Name = rs.getString("productName");
             double p_Price = rs.getDouble("productPrice");
+
     
             // Add row to the table model
-            Object[] row = {c_ID, c_First, c_Last, o_Id, o_Date, o_Quantity, o_Cost, p_ID, p_Name, p_Price};
+            Object[] row = {c_ID, c_First, c_Last, o_Id, o_Date, o_Quantity, o_Cost, o_status, p_ID, p_Name, p_Price};
             model.addRow(row);
         }
     
@@ -135,82 +137,70 @@ public class DecentBuyOrderData {
         }
     }
 
+    public void orderSearchBar(Connection dbConn, JTable table, String searchCriterion, String searchInput) throws SQLException {
+        // Validate search criterion to prevent SQL injection
+        String[] validCriteria = {"idDBOrder", "DBOrderDate", "DBOrderQuantity", "DBOrderTotalCost", "DBOrderStatus", "DBOrderType"};
+        boolean isValidCriterion = false;
 
-    public void orderSearchBar(Connection dbConn, JTable table, String searchCriterion, String searchInput) throws SQLException
-    {
+        for (String criterion : validCriteria) {
+            if (criterion.equals(searchCriterion)) {
+                isValidCriterion = true;
+                break;
+            }
+        }
+
+        if (!isValidCriterion) {
+            throw new SQLException("Invalid search criterion: " + searchCriterion);
+        }
+
         // SQL query with parameterized search
-        String searchSQL = "SELECT * FROM DBOrder where DBOrderStatus like %";
+        String searchSQL = "SELECT * FROM DBOrder WHERE " + searchCriterion + " LIKE ?";
         try (PreparedStatement pstmt = dbConn.prepareStatement(searchSQL)) {
-            pstmt.setString(1, "%" + searchInput + "%");  // Use wildcards for partial matches
+            pstmt.setString(1, "%" + searchInput + "%"); // Use wildcards for partial matches
             ResultSet rs = pstmt.executeQuery();
 
             // Extract data and update the table model
             String[] columnNames = {"Order ID", "Order Date", "Order Quantity", "Order Total", "Order Status", "Order Type"};
             DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
-             while (rs.next()) {
-            int orderId = rs.getInt("IdDBOrder");
-            String OrderDate = rs.getString("DBOrderDate");
-            String OrderQuantity = rs.getString("DBOrderQuantity");
-            String TotalCost = rs.getString("DBOrderTotalCost");
-            String status = rs.getString("DBOrderStatus");
-            String type = rs.getString("DBOrderType");
-            Object[] row = {orderId, OrderDate, OrderQuantity, TotalCost, status, type};
-            model.addRow(row);
-        }
+            while (rs.next()) {
+                int orderId = rs.getInt("idDBOrder");
+                String orderDate = rs.getString("DBOrderDate");
+                int orderQuantity = rs.getInt("DBOrderQuantity");
+                double totalCost = rs.getDouble("DBOrderTotalCost");
+                String status = rs.getString("DBOrderStatus");
+                String type = rs.getString("DBOrderType");
 
-        // set model to table
-        table.setModel(model);
+                Object[] row = {orderId, orderDate, orderQuantity, String.format("$%.2f", totalCost), status, type};
+                model.addRow(row);
+            }
+
+            // Set model to table
+            table.setModel(model);
         }
     }
 
 
+    public void updateProductInDatabase(Connection dbConn, Object id, String name, String category,
+                                        String brand, double price, int stock) throws SQLException {
+        String updateSQL = "UPDATE Products SET productName = ?, productCategory = ?, productBrand = ?, " +
+                "productPrice = ?, productStock = ? WHERE idProducts = ?";
 
-    public void savePendingOrder(Connection dbConn, JTable ordersTable) throws SQLException {
-        DefaultTableModel model = (DefaultTableModel) ordersTable.getModel();
+        try (PreparedStatement pstmt = dbConn.prepareStatement(updateSQL)) {
+            pstmt.setString(1, name);
+            pstmt.setString(2, category);
+            pstmt.setString(3, brand);
+            pstmt.setDouble(4, price);
+            pstmt.setInt(5, stock);
+            pstmt.setObject(6, id);
 
-        for (int row = 0; row < model.getRowCount(); row++) {
-            int orderId = (int) model.getValueAt(row, 0); // Assuming order_id is the first column
-            String firstName = (String) model.getValueAt(row, 1);
-            String lastName = (String) model.getValueAt(row, 2);
-            String itemName = (String) model.getValueAt(row, 3);
-            int quantity = (int) model.getValueAt(row, 4);
-            double price = Double.parseDouble(model.getValueAt(row, 5).toString().replace("$", ""));
-            String status = (String) model.getValueAt(row, 6);
-
-            // Check if the order exists and should be updated
-            String checkSQL = "SELECT COUNT(*) FROM PendingOrders WHERE order_id = ?";
-            try (PreparedStatement checkStmt = dbConn.prepareStatement(checkSQL)) {
-                checkStmt.setInt(1, orderId);
-                ResultSet rs = checkStmt.executeQuery();
-                rs.next();
-                int exists = rs.getInt(1);
-
-                if (exists > 0) { // Order exists, so update it
-                    String updateSQL = "UPDATE PendingOrders SET first_name = ?, last_name = ?, item_name = ?, quantity = ?, price = ?, status = ? WHERE order_id = ?";
-                    try (PreparedStatement pstmt = dbConn.prepareStatement(updateSQL)) {
-                        pstmt.setString(1, firstName);
-                        pstmt.setString(2, lastName);
-                        pstmt.setString(3, itemName);
-                        pstmt.setInt(4, quantity);
-                        pstmt.setDouble(5, price);
-                        pstmt.setString(6, status);
-                        pstmt.setInt(7, orderId);
-                        pstmt.executeUpdate();
-                    }
-                } else { // Order does not exist, insert it as new
-                    String insertSQL = "INSERT INTO PendingOrders (first_name, last_name, item_name, quantity, price, status) VALUES (?, ?, ?, ?, ?, ?)";
-                    try (PreparedStatement pstmt = dbConn.prepareStatement(insertSQL)) {
-                        pstmt.setString(1, firstName);
-                        pstmt.setString(2, lastName);
-                        pstmt.setString(3, itemName);
-                        pstmt.setInt(4, quantity);
-                        pstmt.setDouble(5, price);
-                        pstmt.setString(6, status);
-                        pstmt.executeUpdate();
-                    }
-                }
+            int rowsUpdated = pstmt.executeUpdate();
+            if (rowsUpdated > 0) {
+                System.out.println("Product updated successfully.");
+            } else {
+                System.out.println("No product was updated.");
             }
         }
     }
+
 }

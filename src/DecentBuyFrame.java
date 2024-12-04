@@ -113,8 +113,106 @@ public class DecentBuyFrame extends JFrame{
             }
         });
         buttonPanel.add(refreshButton);
+
+        JButton editButton = new JButton("Edit Selected Item");
+        editButton.addActionListener(e -> {
+            int selectedRow = table.getSelectedRow();
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(null, "Please select a row to edit.", "No Row Selected", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Open edit dialog
+            openEditDialog(dbConn, table, selectedRow);
+        });
+        buttonPanel.add(editButton);
+
         return buttonPanel;
     }
+
+    private void openEditDialog(Connection dbConn, JTable table, int selectedRow) {
+        JDialog dialog = new JDialog();
+        dialog.setTitle("Edit Product");
+        dialog.setSize(400, 300);
+        dialog.setLocationRelativeTo(null);
+        dialog.setModal(true);
+
+        // Get current data from the table
+        Object id = table.getValueAt(selectedRow, 0);
+        String currentName = table.getValueAt(selectedRow, 1).toString();
+        String currentCategory = table.getValueAt(selectedRow, 2).toString();
+        String currentBrand = table.getValueAt(selectedRow, 3).toString();
+        String currentPrice = table.getValueAt(selectedRow, 4).toString().replace("$", "");
+        int currentStock = Integer.parseInt(table.getValueAt(selectedRow, 5).toString());
+
+        JPanel panel = new JPanel();
+        // Create input fields pre-filled with current data
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        JTextField nameField = new JTextField(currentName, 20);
+        JTextField categoryField = new JTextField(currentCategory, 20);
+        JTextField brandField = new JTextField(currentBrand, 20);
+        JTextField priceField = new JTextField(currentPrice, 20);
+        JTextField stockField = new JTextField(String.valueOf(currentStock), 20);
+
+        panel.add(new JLabel("Name:"));
+        panel.add(nameField);
+        panel.add(new JLabel("Category:"));
+        panel.add(categoryField);
+        panel.add(new JLabel("Brand:"));
+        panel.add(brandField);
+        panel.add(new JLabel("Price:"));
+        panel.add(priceField);
+        panel.add(new JLabel("Stock:"));
+        panel.add(stockField);
+
+        // Buttons
+        JButton saveButton = new JButton("Save");
+        JButton cancelButton = new JButton("Cancel");
+
+        saveButton.addActionListener(e -> {
+            String updatedName = nameField.getText();
+            String updatedCategory = categoryField.getText();
+            String updatedBrand = brandField.getText();
+            String updatedPrice = priceField.getText();
+            String updatedStock = stockField.getText();
+
+            // Validate inputs
+            if (updatedName.isEmpty() || updatedCategory.isEmpty() || updatedBrand.isEmpty() ||
+                    updatedPrice.isEmpty() || updatedStock.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "All fields must be filled!", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            try {
+                double price = Double.parseDouble(updatedPrice);
+                int stock = Integer.parseInt(updatedStock);
+
+                // Call method in Order Data class
+                DBDB_OrderData.updateProductInDatabase(dbConn, id, updatedName, updatedCategory, updatedBrand, price, stock);
+
+                // Refresh table
+                DBDB_OrderData.loadInventoryData(dbConn, table);
+                dialog.dispose();
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "Price must be a number and Stock must be an integer.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(dialog, "Failed to update product. Check logs for details.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        cancelButton.addActionListener(e -> dialog.dispose());
+
+        // Add components to dialog
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(saveButton);
+        buttonPanel.add(cancelButton);
+
+        dialog.add(panel, BorderLayout.CENTER);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+        dialog.setVisible(true);
+    }
+
 
     private void updateInventoryQuantities(Connection dbConn) throws SQLException {
         String updateInventorySQL = 
@@ -145,6 +243,10 @@ public class DecentBuyFrame extends JFrame{
         JScrollPane scrollPane = new JScrollPane(ordersTable);
         ordersPanel.add(scrollPane, BorderLayout.CENTER);
 
+        // Add the search panel at the top
+        JPanel searchPanel = createOrderSearchPanel(dbConn, ordersTable);
+        ordersPanel.add(searchPanel, BorderLayout.NORTH);
+
         JPanel buttonPanel = new JPanel();
         JButton refreshOrdersButton = new JButton("Refresh Orders");
 
@@ -164,21 +266,19 @@ public class DecentBuyFrame extends JFrame{
         buttonPanel.add(refreshOrdersButton);
 
         JButton addOrderButton = new JButton("Add Order");
-       addOrderButton.addActionListener(e -> {
-        try {
-            new Add_Order_or_Product();
-        } catch (SQLException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-        }
-    }); {
+        addOrderButton.addActionListener(e -> {
+            try {
+                new Add_Order_or_Product();
+            } catch (SQLException e1) {
+                e1.printStackTrace();
+            }
+        });
         buttonPanel.add(addOrderButton);
 
         ordersPanel.add(buttonPanel, BorderLayout.SOUTH);
         return ordersPanel;
-
-        }
     }
+
 
     public void openAddOrderDialog(Connection dbConn, JTable ordersTable) {
     // Create a dialog window
@@ -227,14 +327,6 @@ public class DecentBuyFrame extends JFrame{
     } catch (SQLException ex) {
         ex.printStackTrace();
     }
-
-
-
-
-
-
-
-
 
     // Add fields to the panel
 
@@ -365,7 +457,6 @@ public class DecentBuyFrame extends JFrame{
     }
 }
 
-        
     public static void main(String[] args) {
         try {
             new DecentBuyFrame();
