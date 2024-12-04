@@ -1,5 +1,4 @@
 import javax.swing.*;
-
 import com.formdev.flatlaf.FlatDarculaLaf;
 
 public class InventoryManagement {
@@ -13,24 +12,11 @@ public class InventoryManagement {
         }
 
         try {
-
-
-public class InventoryManagement {
-    DatabaseConn dbconn = new DatabaseConn();
-    public void main(String[] args)
-    {
-        try {
-
             SwingUtilities.invokeLater(() -> new DBLogin());
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-
         }
 
     }
-
-    }
-}
-
