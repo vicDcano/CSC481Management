@@ -1,35 +1,27 @@
 import javax.swing.*;
 import javax.swing.table.*;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
-import java.sql.*;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.HashMap;
-import java.util.Map;
 
 import com.formdev.flatlaf.FlatDarculaLaf;
 
-@SuppressWarnings("unused")
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Font;
+import java.sql.*;
+import java.text.DateFormat;
+import java.time.LocalDate;
+import java.time.format.*;
+// import com.formdev.flatlaf.FlatDarculaLaf;
 
-public class DecentBuyFrame extends JFrame { 
-    private JTable ordersTable;
-    private JTable inventoryTable;
-    // Uncomment these if you decide to use them in the future
-    // private JTable canceledOrdersTable;
-    // private JTable completedOrdersTable;
-    
+
+
+@SuppressWarnings("unused")
+public class DecentBuyFrame extends JFrame{
     DecentBuyOrderData DBDB_OrderData = new DecentBuyOrderData();
     DatabaseConn Conn = new DatabaseConn();
+    
     LocalDate currentDate = LocalDate.now();
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    // Define custom highlight colors
     private final Color primaryColor = new Color(0, 122, 204);   // Blue
     private final Color secondaryColor = new Color(98, 114, 164); // Magenta
 
@@ -45,171 +37,53 @@ public class DecentBuyFrame extends JFrame {
         setTitle("DecentBuy Inventory Management");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(800, 600);
-        setLocationRelativeTo(null); // Center the frame
+        setLocationRelativeTo(null);
 
+    
         add(createTabbedPane(dbConn));
         setVisible(true);
     }
 
-    /**
-     * Creates the main tabbed pane with existing tabs.
-     */
     public JTabbedPane createTabbedPane(Connection dbConn) {
         JTabbedPane tabbedPane = new JTabbedPane();
 
         // Customize tabbedPane appearance
         tabbedPane.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         tabbedPane.setForeground(primaryColor);
-
+        
         tabbedPane.addTab("Product Inventory", createInventoryPanel(dbConn));
         tabbedPane.addTab("Orders", createOrdersPanel(dbConn));
-        // Uncomment these if you decide to use them in the future
-        // tabbedPane.addTab("Cancelled Orders", createCanceledOrdersPanel(dbConn));
-        // tabbedPane.addTab("Completed Orders", createCompletedOrdersPanel(dbConn));
+        //tabbedPane.addTab("Cancelled Orders", createCompletedOrdersPanel(dbConn));
+        //tabbedPane.addTab("Current Orders", createCanceledOrdersPanel(dbConn));
         return tabbedPane;
     }
 
-    /**
-     * Creates the Product Inventory panel.
-     */
     public JPanel createInventoryPanel(Connection dbConn) {
         JPanel inventoryPanel = new JPanel(new BorderLayout());
-        inventoryTable = new JTable();
-        JScrollPane scrollPane = new JScrollPane(inventoryTable);
+        JTable table = new JTable();
+        JScrollPane scrollPane = new JScrollPane(table);
         inventoryPanel.add(scrollPane, BorderLayout.CENTER);
 
-        JPanel searchPanel = createSearchPanel(dbConn, inventoryTable);
+        JPanel searchPanel = createSearchPanel(dbConn, table);
         inventoryPanel.add(searchPanel, BorderLayout.NORTH);
 
-        JPanel buttonPanel = createInventoryButtonPanel(dbConn, inventoryTable);
+        JPanel buttonPanel = createInventoryButtonPanel(dbConn, table);
         inventoryPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         try {
-            DBDB_OrderData.loadInventoryData(dbConn, inventoryTable);
+            DBDB_OrderData.loadInventoryData(dbConn, table);
         } catch (SQLException e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Failed to load inventory data: " + e.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
         }
         return inventoryPanel;
     }
 
-    private final Map<String, String> searchCriteriaMap = new HashMap<>();
-
-    {
-        searchCriteriaMap.put("Product ID", "idProducts");
-        searchCriteriaMap.put("Product Name", "productName");
-        searchCriteriaMap.put("Product Category", "productCategory");
-        searchCriteriaMap.put("Product Brand", "productBrand");
-        searchCriteriaMap.put("Product Price", "productPrice");
-        searchCriteriaMap.put("Product Stock", "productStock");
-    }
-
-    /**
-     * Creates the search panel for Product Inventory.
-     */
     public JPanel createSearchPanel(Connection dbConn, JTable table) {
         JPanel searchPanel = new JPanel();
-        searchPanel.setBackground(Color.DARK_GRAY);
+        //searchPanel.setBackground(Color.DARK_GRAY);
         searchPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        String[] searchOptions = {"Product ID", "Product Name", "Product Category", "Product Brand", "Product Price", "Product Stock"};
-        
-        JComboBox<String> searchDropdown = new JComboBox<>(searchOptions);
-        searchDropdown.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        searchDropdown.setForeground(Color.WHITE);
-        searchDropdown.setBackground(Color.GRAY);
-
-        JTextField searchTextField = new JTextField(15);
-        searchTextField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-
-        JButton searchButton = new JButton("Search");
-        styleButton(searchButton, primaryColor, secondaryColor);
-       // String displayCriteria = (String) searchDropdown.getSelectedItem();
-       // String columnCriteria = searchCriteriaMap.get(displayCriteria);
-
-
-        searchButton.addActionListener(e -> {
-            String displayCriteria = (String) searchDropdown.getSelectedItem();
-            String columnCriteria = searchCriteriaMap.get(displayCriteria);
-        
-            if (columnCriteria == null) {
-                JOptionPane.showMessageDialog(this, "Invalid Search Criteria Selected.", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-        
-            try {
-                DBDB_OrderData.searchBarInventory(dbConn, table, columnCriteria, searchTextField.getText());
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Search failed: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-        searchPanel.add(searchDropdown);
-        searchPanel.add(searchTextField);
-        searchPanel.add(searchButton);
-        return searchPanel;
-    }
-
-    /**
-     * Creates the Orders panel with existing buttons.
-     */
-    public JPanel createOrdersPanel(Connection dbConn) {
-        JPanel ordersPanel = new JPanel(new BorderLayout());
-        ordersTable = new JTable(); 
-        JScrollPane scrollPane = new JScrollPane(ordersTable);
-        ordersPanel.add(scrollPane, BorderLayout.CENTER);
-
-        JPanel searchPanel = createOrderSearchPanel(dbConn, ordersTable);
-        ordersPanel.add(searchPanel, BorderLayout.NORTH);
-
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setBackground(Color.DARK_GRAY);
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        JButton refreshOrdersButton = new JButton("Refresh Orders");
-        styleButton(refreshOrdersButton, primaryColor, secondaryColor);
-        refreshOrdersButton.addActionListener(e -> {
-            try {
-                DBDB_OrderData.loadDBOrderData(dbConn, ordersTable);
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Refresh failed: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-        buttonPanel.add(refreshOrdersButton);
-
-        JButton addOrderButton = new JButton("Add Order");
-        styleButton(addOrderButton, primaryColor, secondaryColor);
-        addOrderButton.addActionListener(e -> openAddOrderDialog(dbConn));
-        buttonPanel.add(addOrderButton);
-
-        ordersPanel.add(buttonPanel, BorderLayout.SOUTH);
-
-        // Load data initially
-        try {
-            DBDB_OrderData.loadDBOrderData(dbConn, ordersTable);
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Failed to load orders data: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-        }
-
-        return ordersPanel;
-    }
-
-    /**
-     * Creates the search panel for Orders.
-     */
-    public JPanel createOrderSearchPanel(Connection dbConn, JTable table) {
-        JPanel searchPanel = new JPanel();
-        searchPanel.setBackground(Color.DARK_GRAY);
-        searchPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        String[] searchOptions = {"Order ID", "Current", "Pending", "Cancelled", "Customer", "Supplier"};
+        String[] searchOptions = {"idProducts", "productName", "productCategory", "productBrand", "productPrice", "productStock"};
         JComboBox<String> searchDropdown = new JComboBox<>(searchOptions);
         searchDropdown.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         searchDropdown.setForeground(Color.WHITE);
@@ -222,12 +96,11 @@ public class DecentBuyFrame extends JFrame {
         styleButton(searchButton, primaryColor, secondaryColor);
 
         searchButton.addActionListener(e -> {
+
             try {
                 DBDB_OrderData.searchBarInventory(dbConn, table, searchDropdown.getSelectedItem().toString(), searchTextField.getText());
             } catch (SQLException ex) {
                 ex.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Search failed: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
 
@@ -237,43 +110,257 @@ public class DecentBuyFrame extends JFrame {
         return searchPanel;
     }
 
-    /**
-     * Creates the Inventory Button panel with a refresh button.
-     */
+    public JPanel createOrderSearchPanel(Connection dbConn, JTable table) {
+        JPanel searchPanel = new JPanel();
+        searchPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        String[] searchOptions = {"idDBOrder", "Current", "Pending", "Cancelled", "Customer", "Supplier"};
+        JComboBox<String> searchDropdown = new JComboBox<>(searchOptions);
+        searchDropdown.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        searchDropdown.setForeground(Color.WHITE);
+        searchDropdown.setBackground(Color.GRAY);
+
+        JTextField searchTextField = new JTextField(15);
+        searchTextField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        
+        JButton searchButton = new JButton("Search");
+        styleButton(searchButton, primaryColor, secondaryColor);
+
+        searchButton.addActionListener(e -> {
+
+            try {
+                DBDB_OrderData.searchBarInventory(dbConn, table, searchDropdown.getSelectedItem().toString(), searchTextField.getText());
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        searchPanel.add(searchDropdown);
+        searchPanel.add(searchTextField);
+        searchPanel.add(searchButton);
+        return searchPanel;
+    }
+
     public JPanel createInventoryButtonPanel(Connection dbConn, JTable table) {
         JPanel buttonPanel = new JPanel();
-        buttonPanel.setBackground(Color.DARK_GRAY);
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
         JButton refreshButton = new JButton("Refresh Inventory");
-        styleButton(refreshButton, primaryColor, secondaryColor);
         refreshButton.addActionListener(e -> {
             try {
                 updateInventoryQuantities(dbConn);
                 DBDB_OrderData.loadInventoryData(dbConn, table);
             } catch (SQLException ex) {
                 ex.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Refresh failed: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
         buttonPanel.add(refreshButton);
+
+        JButton editButton = new JButton("Edit Product");
+        editButton.addActionListener(e -> {
+            int selectedRow = table.getSelectedRow();
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(null, "Please select a row to edit.", "No Row Selected", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Open edit dialog
+            openEditDialog(dbConn, table, selectedRow);
+        });
+        buttonPanel.add(editButton);
+
+         // **Add Product Button**
+        JButton addButton = new JButton("Add Product");
+        addButton.addActionListener(e -> openAddProductDialog(dbConn, table));
+        buttonPanel.add(addButton);
+
         return buttonPanel;
     }
 
-    /**
-     * Updates inventory quantities based on pending orders.
-     */
+    private void openAddProductDialog(Connection dbConn, JTable table) {
+        JDialog dialog = new JDialog(this, "Add New Product", true);
+        dialog.setSize(400, 400);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Input Fields
+        JTextField nameField = new JTextField(20);
+        JTextField categoryField = new JTextField(20);
+        JTextField brandField = new JTextField(20);
+        JTextField priceField = new JTextField(20);
+        JTextField stockField = new JTextField(20);
+
+        panel.add(new JLabel("Product Name:"));
+        panel.add(nameField);
+        panel.add(Box.createVerticalStrut(10));
+
+        panel.add(new JLabel("Category:"));
+        panel.add(categoryField);
+        panel.add(Box.createVerticalStrut(10));
+
+        panel.add(new JLabel("Brand:"));
+        panel.add(brandField);
+        panel.add(Box.createVerticalStrut(10));
+
+        panel.add(new JLabel("Price:"));
+        panel.add(priceField);
+        panel.add(Box.createVerticalStrut(10));
+
+        panel.add(new JLabel("Stock:"));
+        panel.add(stockField);
+        panel.add(Box.createVerticalStrut(20));
+
+        // Buttons
+        JPanel buttonPanel = new JPanel();
+        JButton saveButton = new JButton("Save");
+        JButton cancelButton = new JButton("Cancel");
+        styleButton(saveButton, primaryColor, secondaryColor);
+        styleButton(cancelButton, primaryColor, secondaryColor);
+        buttonPanel.add(saveButton);
+        buttonPanel.add(cancelButton);
+
+        panel.add(buttonPanel);
+        dialog.add(panel);
+
+        // Action Listeners
+        saveButton.addActionListener(e -> {
+            String name = nameField.getText().trim();
+            String category = categoryField.getText().trim();
+            String brand = brandField.getText().trim();
+            String priceText = priceField.getText().trim();
+            String stockText = stockField.getText().trim();
+
+            // Validation
+            if (name.isEmpty() || category.isEmpty() || brand.isEmpty() || priceText.isEmpty() || stockText.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "All fields must be filled!", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            double price;
+            int stock;
+
+            try {
+                price = Double.parseDouble(priceText);
+                stock = Integer.parseInt(stockText);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "Price must be a number and Stock must be an integer.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            try {
+                // Call method to add product
+                DBDB_OrderData.addProduct(dbConn, name, category, brand, price, stock);
+
+                // Refresh table
+                DBDB_OrderData.loadInventoryData(dbConn, table);
+                JOptionPane.showMessageDialog(dialog, "Product added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                dialog.dispose();
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(dialog, "Failed to add product. Check logs for details.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        cancelButton.addActionListener(e -> dialog.dispose());
+
+        dialog.setVisible(true);
+    }
+
+    private void openEditDialog(Connection dbConn, JTable table, int selectedRow) {
+        JDialog dialog = new JDialog();
+        dialog.setTitle("Edit Product");
+        dialog.setSize(400, 300);
+        dialog.setLocationRelativeTo(null);
+        dialog.setModal(true);
+
+        // Get current data from the table
+        Object id = table.getValueAt(selectedRow, 0);
+        String currentName = table.getValueAt(selectedRow, 1).toString();
+        String currentCategory = table.getValueAt(selectedRow, 2).toString();
+        String currentBrand = table.getValueAt(selectedRow, 3).toString();
+        String currentPrice = table.getValueAt(selectedRow, 4).toString().replace("$", "");
+        int currentStock = Integer.parseInt(table.getValueAt(selectedRow, 5).toString());
+
+        JPanel panel = new JPanel();
+        // Create input fields pre-filled with current data
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        JTextField nameField = new JTextField(currentName, 20);
+        JTextField categoryField = new JTextField(currentCategory, 20);
+        JTextField brandField = new JTextField(currentBrand, 20);
+        JTextField priceField = new JTextField(currentPrice, 20);
+        JTextField stockField = new JTextField(String.valueOf(currentStock), 20);
+
+        panel.add(new JLabel("Name:"));
+        panel.add(nameField);
+        panel.add(new JLabel("Category:"));
+        panel.add(categoryField);
+        panel.add(new JLabel("Brand:"));
+        panel.add(brandField);
+        panel.add(new JLabel("Price:"));
+        panel.add(priceField);
+        panel.add(new JLabel("Stock:"));
+        panel.add(stockField);
+
+        // Buttons
+        JButton saveButton = new JButton("Save");
+        JButton cancelButton = new JButton("Cancel");
+
+        saveButton.addActionListener(e -> {
+            String updatedName = nameField.getText();
+            String updatedCategory = categoryField.getText();
+            String updatedBrand = brandField.getText();
+            String updatedPrice = priceField.getText();
+            String updatedStock = stockField.getText();
+
+            // Validate inputs
+            if (updatedName.isEmpty() || updatedCategory.isEmpty() || updatedBrand.isEmpty() ||
+                    updatedPrice.isEmpty() || updatedStock.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "All fields must be filled!", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            try {
+                double price = Double.parseDouble(updatedPrice);
+                int stock = Integer.parseInt(updatedStock);
+
+                // Call method in Order Data class
+                DBDB_OrderData.updateProductInDatabase(dbConn, id, updatedName, updatedCategory, updatedBrand, price, stock);
+
+                // Refresh table
+                DBDB_OrderData.loadInventoryData(dbConn, table);
+                dialog.dispose();
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "Price must be a number and Stock must be an integer.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(dialog, "Failed to update product. Check logs for details.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        cancelButton.addActionListener(e -> dialog.dispose());
+
+        // Add components to dialog
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(saveButton);
+        buttonPanel.add(cancelButton);
+
+        dialog.add(panel, BorderLayout.CENTER);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+        dialog.setVisible(true);
+    }
+
+
     private void updateInventoryQuantities(Connection dbConn) throws SQLException {
         String updateInventorySQL = 
-                "UPDATE Products AS i " +
+                "UPDATE Products AS inventory " +
                 "JOIN " +
-                    "(SELECT Products_idProducts, SUM(DBOrderQuantity) AS total_ordered " +
-                    " FROM DBOrder WHERE DBOrderStatus = 'Pending' " +
-                    " GROUP BY Products_idProducts ) As o" +
-                    " ON i.idProducts = o.Products_idProducts " +
-                    " SET i.productStock = i.productStock - o.total_ordered " +
-                    " WHERE i.productStock >= o.total_ordered";
+                    "(SELECT ProductsName, SUM(ProductsStock) AS total_ordered " +
+                    " FROM PendingOrders WHERE processed = FALSE" +
+                    " GROUP BY ProductsName ) As o" +
+                    " ON i.ProductsName = o.ProductsName " +
+                    " SET i.ProductsStock = i.ProductsStock - o.total_ordered " +
+                    " WHERE i.ProductsStock >= o.total_ordered";
 
         try (PreparedStatement pstmt = dbConn.prepareStatement(updateInventorySQL)) {
             int rowsUpdated = pstmt.executeUpdate();
@@ -281,337 +368,240 @@ public class DecentBuyFrame extends JFrame {
         }
 
         String markedProcessedSQL = 
-            "UPDATE DBOrder SET DBOrderStatus = 'Current' WHERE DBOrderStatus = 'Pending'";
+            "UPDATE DBOrder SET processed = TRUE WHERE processed = FALSE";
         try (PreparedStatement pstmt = dbConn.prepareStatement(markedProcessedSQL)) {
             pstmt.executeUpdate();
         }
     }
 
-    /**
-     * Opens the dialog to add a new order.
-     */
-    private void openAddOrderDialog(Connection dbConn) {
-        // Create a dialog window
-        JDialog dialog = new JDialog(this, "Add New Order", true);
-        dialog.setSize(450, 500);
-        dialog.setLocationRelativeTo(this);
+    public JPanel createOrdersPanel(Connection dbConn) {
+        JPanel ordersPanel = new JPanel(new BorderLayout());
+        JTable ordersTable = new JTable();
+        JScrollPane scrollPane = new JScrollPane(ordersTable);
+        ordersPanel.add(scrollPane, BorderLayout.CENTER);
 
-        // Create input fields
-        JPanel panel = new JPanel();
-        panel.setLayout(new GridBagLayout());
-        panel.setBackground(Color.DARK_GRAY);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        // Add the search panel at the top
+        JPanel searchPanel = createOrderSearchPanel(dbConn, ordersTable);
+        ordersPanel.add(searchPanel, BorderLayout.NORTH);
 
-        JLabel orderDateLabel = new JLabel("Order Date: (YYYY-MM-DD)");
-        orderDateLabel.setForeground(Color.WHITE);
-        JTextField orderDateField = new JTextField(20);
-        orderDateField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        JPanel buttonPanel = new JPanel();
+        JButton refreshOrdersButton = new JButton("Refresh Orders");
 
-        JLabel orderQuantityLabel = new JLabel("Order Quantity:");
-        orderQuantityLabel.setForeground(Color.WHITE);
-        JTextField orderQuantityField = new JTextField(20);
-        orderQuantityField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-
-        JLabel customerIdLabel = new JLabel("Customer ID:");
-        customerIdLabel.setForeground(Color.WHITE);
-        JTextField customerIdField = new JTextField(20);
-        customerIdField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-
-        JLabel customerFirstLabel = new JLabel("Customer First Name:");
-        customerFirstLabel.setForeground(Color.WHITE);
-        JTextField customerFirstField = new JTextField(20);
-        customerFirstField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-
-        JLabel customerLastLabel = new JLabel("Customer Last Name:");
-        customerLastLabel.setForeground(Color.WHITE);
-        JTextField customerLastField = new JTextField(20);
-        customerLastField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-
-        JLabel productLabel = new JLabel("Product: ");
-        productLabel.setForeground(Color.WHITE);
-        JComboBox<String> productComboBox = new JComboBox<>();
-        productComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         try {
-            Statement stmt = dbConn.createStatement();
-            ResultSet rs = stmt.executeQuery("SELECT idProducts, productName FROM Products");
-            while (rs.next()) {
-                int productId = rs.getInt("idProducts");
-                String productName = rs.getString("productName");
-                productComboBox.addItem(productId + " - " + productName);
-            }
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(dialog, "Failed to load products: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            DBDB_OrderData.loadOrdersData(dbConn, ordersTable);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
 
-        // Add components to panel
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        panel.add(orderDateLabel, gbc);
-
-        gbc.gridx = 1;
-        gbc.gridy = 0;
-        panel.add(orderDateField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        panel.add(orderQuantityLabel, gbc);
-
-        gbc.gridx = 1;
-        gbc.gridy = 1;
-        panel.add(orderQuantityField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        panel.add(customerIdLabel, gbc);
-
-        gbc.gridx = 1;
-        gbc.gridy = 2;
-        panel.add(customerIdField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        panel.add(customerFirstLabel, gbc);
-
-        gbc.gridx = 1;
-        gbc.gridy = 3;
-        panel.add(customerFirstField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 4;
-        panel.add(customerLastLabel, gbc);
-
-        gbc.gridx = 1;
-        gbc.gridy = 4;
-        panel.add(customerLastField, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        panel.add(productLabel, gbc);
-
-        gbc.gridx = 1;
-        gbc.gridy = 5;
-        panel.add(productComboBox, gbc);
-
-        // Buttons
-        JButton submitButton = new JButton("Submit");
-        JButton cancelButton = new JButton("Cancel");
-        styleButton(submitButton, primaryColor, secondaryColor);
-        styleButton(cancelButton, primaryColor, secondaryColor);
-
-        // Action Listener for Submit button
-        submitButton.addActionListener(e -> {
-            String orderDate = orderDateField.getText();
-            String orderQuantityText = orderQuantityField.getText();
-            String customerIdText = customerIdField.getText();
-            String customerFirst = customerFirstField.getText();
-            String customerLast = customerLastField.getText();
-            String selectedProduct = (String) productComboBox.getSelectedItem();
-
-            if (orderDate.isEmpty() || orderQuantityText.isEmpty() ||
-                customerIdText.isEmpty() || customerFirst.isEmpty() || customerLast.isEmpty() || selectedProduct == null) {
-                JOptionPane.showMessageDialog(dialog, "All fields must be filled!", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
+        refreshOrdersButton.addActionListener(e -> {
             try {
-                // Validate date format
-                LocalDate.parse(orderDate, formatter);
-
-                int orderQuantity = Integer.parseInt(orderQuantityText);
-                int customerId = Integer.parseInt(customerIdText);
-                int productId = Integer.parseInt(selectedProduct.split(" - ")[0]);
-
-                // Retrieve product price
-                double productPrice = getProductPrice(dbConn, productId);
-
-                // Calculate total cost
-                double totalCost = productPrice * orderQuantity;
-
-                // Insert or update customer information
-                insertOrUpdateCustomer(dbConn, customerId, customerFirst, customerLast);
-
-                // Add order to database
-                addOrderToDatabase(dbConn, orderDate, orderQuantity, totalCost, "Pending", "Customer", customerId, productId);
-
-                // Refresh the orders and inventory tables
-                DBDB_OrderData.loadDBOrderData(dbConn, ordersTable);
-                DBDB_OrderData.loadInventoryData(dbConn, inventoryTable);
-
-                JOptionPane.showMessageDialog(dialog, "Order added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-                dialog.dispose();
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(dialog, "Numeric fields must contain valid numbers!", "Error", JOptionPane.ERROR_MESSAGE);
-            } catch (DateTimeParseException ex) {
-                JOptionPane.showMessageDialog(dialog, "Invalid date format! Please use YYYY-MM-DD.", "Error", JOptionPane.ERROR_MESSAGE);
+                DBDB_OrderData.loadOrdersData(dbConn, ordersTable);
             } catch (SQLException ex) {
                 ex.printStackTrace();
-                JOptionPane.showMessageDialog(dialog, "Failed to add order: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
+        buttonPanel.add(refreshOrdersButton);
 
-        // Action Listener for Cancel button
-        cancelButton.addActionListener(e -> dialog.dispose());
-
-        // Add buttons to panel
-        gbc.gridx = 0;
-        gbc.gridy = 6;
-        panel.add(submitButton, gbc);
-
-        gbc.gridx = 1;
-        gbc.gridy = 6;
-        panel.add(cancelButton, gbc);
-
-        dialog.add(panel, BorderLayout.CENTER);
-        dialog.setVisible(true);
-    }
-
-    /**
-     * Retrieves the price of a product by its ID.
-     */
-    private double getProductPrice(Connection dbConn, int productId) throws SQLException {
-        String selectPriceSQL = "SELECT productPrice FROM Products WHERE idProducts = ?";
-        try (PreparedStatement pstmt = dbConn.prepareStatement(selectPriceSQL)) {
-            pstmt.setInt(1, productId);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                return rs.getDouble("productPrice");
-            } else {
-                throw new SQLException("Product not found!");
+        JButton addOrderButton = new JButton("Add Order");
+        addOrderButton.addActionListener(e -> {
+            try {
+                new AddOrder();
+            } catch (SQLException e1) {
+                e1.printStackTrace();
             }
-        }
+        });
+        buttonPanel.add(addOrderButton);
+
+        ordersPanel.add(buttonPanel, BorderLayout.SOUTH);
+        return ordersPanel;
     }
 
-    /**
-     * Inserts a new customer or updates an existing one.
-     */
-    private void insertOrUpdateCustomer(Connection dbConn, int customerId, String firstName, String lastName) throws SQLException {
-        String checkCustomerSQL = "SELECT * FROM Customer WHERE idCustomer = ?";
-        try (PreparedStatement pstmt = dbConn.prepareStatement(checkCustomerSQL)) {
-            pstmt.setInt(1, customerId);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                // Customer exists, update
-                String updateCustomerSQL = "UPDATE Customer SET customerFirst = ?, customerLast = ? WHERE idCustomer = ?";
-                try (PreparedStatement updateStmt = dbConn.prepareStatement(updateCustomerSQL)) {
-                    updateStmt.setString(1, firstName);
-                    updateStmt.setString(2, lastName);
-                    updateStmt.setInt(3, customerId);
-                    updateStmt.executeUpdate();
-                }
-            } else {
-                // Customer does not exist, insert
-                String insertCustomerSQL = "INSERT INTO Customer (idCustomer, customerFirst, customerLast) VALUES (?, ?, ?)";
-                try (PreparedStatement insertStmt = dbConn.prepareStatement(insertCustomerSQL)) {
-                    insertStmt.setInt(1, customerId);
-                    insertStmt.setString(2, firstName);
-                    insertStmt.setString(3, lastName);
-                    insertStmt.executeUpdate();
+
+    public void openAddOrderDialog(Connection dbConn, JTable ordersTable) {
+    // Create a dialog window
+    JDialog dialog = new JDialog();
+    dialog.setTitle("Add New Order");
+    dialog.setSize(400, 400);
+    dialog.setLocationRelativeTo(null);
+    dialog.setModal(true);
+
+    // Create input fields
+    JPanel panel = new JPanel();
+    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+
+    JTextField OrderID = new JTextField(20);
+    JTextField DBO_Quantity = new JTextField(20);
+    JTextField DBO_Type = new JTextField(20);
+    JTextField DBO_Date = new JTextField(20);
+
+    JComboBox<String> itemComboBox = new JComboBox<>(); // Populates products
+    try {
+        Statement stmt = dbConn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT productName FROM Products");
+        while (rs.next()) {
+            itemComboBox.addItem(rs.getString("productName"));
+        }
+    } catch (SQLException ex) {
+        ex.printStackTrace();
+    }
+    JComboBox<String> customerComboBox = new JComboBox<>(); // Populates products
+    try {
+        Statement stmt = dbConn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT concat(customerFirst, customerLast) As Name FROM Customer");
+        while (rs.next()) {
+            customerComboBox.addItem(rs.getString("Name"));
+        }
+    } catch (SQLException ex) {
+        ex.printStackTrace();
+    }
+    JComboBox<String> supplierComboBox = new JComboBox<>(); // Populates products
+    try {
+        Statement stmt = dbConn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT SupplierName FROM Suppliers");
+        while (rs.next()) {
+            supplierComboBox.addItem(rs.getString("productName"));
+        }
+    } catch (SQLException ex) {
+        ex.printStackTrace();
+    }
+
+    // Add fields to the panel
+
+    
+    panel.add(new JLabel("Order ID:"));
+    panel.add(OrderID);
+    panel.add(new JLabel("Date (YYYY-MM-DD):"));
+    panel.add(DBO_Date);
+    panel.add(new JLabel("Quantity:"));
+    panel.add(DBO_Quantity);
+    panel.add(new JLabel("Type (Customer or Supplier):"));
+    panel.add(DBO_Type);
+    panel.add(new JLabel("Product:"));
+    panel.add(itemComboBox);
+    panel.add(new JLabel("Customer Name:"));
+    panel.add(customerComboBox);
+    panel.add(new JLabel("Supplier Name:"));
+    panel.add(supplierComboBox);
+
+    // Buttons
+    JButton submitButton = new JButton("Submit");
+    JButton cancelButton = new JButton("Cancel");
+
+    // Submit button action
+    submitButton.addActionListener(e -> {
+        String id = OrderID.getText();
+        String formattedDate = DBO_Date.getText();
+        String quantityText = DBO_Quantity.getText();
+        String type = DBO_Type.getText();
+        String productName = (String) itemComboBox.getSelectedItem();
+        String CustomerName = (String) customerComboBox.getSelectedItem();
+        String SupplierName = (String) supplierComboBox.getSelectedItem();
+
+        if (id.isEmpty() || formattedDate.isEmpty() || quantityText.isEmpty() || type.isEmpty() || productName == null) {
+            JOptionPane.showMessageDialog(dialog, "All fields must be filled!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            int orderId = Integer.parseInt(id);
+            int quantity = Integer.parseInt(quantityText);
+            double price = 0.0;
+
+            // Fetch product price
+            String selectPriceSQL = "SELECT ProductsPrice FROM Products WHERE productName = ?";
+            try (PreparedStatement pstmt = dbConn.prepareStatement(selectPriceSQL)) {
+                pstmt.setString(1, productName);
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    price = rs.getDouble("ProductsPrice");
+                } else {
+                    JOptionPane.showMessageDialog(dialog, "Product not found!", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
             }
-        }
-    }
 
-    /**
-     * Adds a new order to the database.
-     */
-    private void addOrderToDatabase(Connection dbConn, String date, int quantity, double totalCost, String status, String type, int customerId, int productId) throws SQLException {
-        String insertOrderSQL = "INSERT INTO DBOrder (DBOrderDate, DBOrderQuantity, DBOrderTotalCost, DBOrderStatus, DBOrderType, Customer_idCustomer, Products_idProducts) "
-                                + "VALUES (?, ?, ?, ?, ?, ?, ?)";
-        try (PreparedStatement pstmt = dbConn.prepareStatement(insertOrderSQL)) {
-            pstmt.setString(1, date);
-            pstmt.setInt(2, quantity);
-            pstmt.setDouble(3, totalCost);
-            pstmt.setString(4, status);
-            pstmt.setString(5, type);
-            pstmt.setInt(6, customerId);
-            pstmt.setInt(7, productId);
-            pstmt.executeUpdate();
+            // Calculate total cost
+            double totalCost = price * quantity;
+
+            // Insert the new order
+           // addOrderToDatabase(dbConn, orderId, formattedDate, quantity, totalCost, "Pending", type);
+
+            // Refresh the orders table
+            DBDB_OrderData.loadOrdersData(dbConn, ordersTable);
+            dialog.dispose();
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(dialog, "Order ID and Quantity must be numbers!", "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(dialog, "Failed to add order. Check logs for details.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    });
+
+    // Cancel button action
+    cancelButton.addActionListener(e -> dialog.dispose());
+
+    // Add buttons to a panel
+    JPanel buttonPanel = new JPanel();
+    buttonPanel.add(submitButton);
+    buttonPanel.add(cancelButton);
+
+    // Add components to the dialog
+    dialog.add(panel, BorderLayout.CENTER);
+    dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+    dialog.setVisible(true);
+}
+
+    // successfully adds orders, but new orders are not being added to the database, josh look into this 
+    private void addOrderToDatabase(Connection dbConn, int id, String date, int quantity, double totalCost, 
+                                 String supplierName, String productName, String customerFirst, String customerLast, 
+                                 String status, String type) throws SQLException {
+    // SQL query to insert a new order with subqueries for foreign keys
+    String insertSQL = "INSERT INTO decentbuy3.DBOrder " + 
+                       "(idDBOrder, DBOrderDate, DBOrderQuantity, DBOrderTotalCost, " +
+                       "Supplier_idSupplier, Products_idProducts, Customer_idCustomer, " +
+                       "DBOrderStatus, DBOrderType) " +
+                       "VALUES (?, ?, ?, ?, " +
+                       "(SELECT idSupplier FROM decentbuy3.Supplier WHERE SupplierName = ? LIMIT 1), " +
+                       "(SELECT idProducts FROM decentbuy3.Products WHERE productName = ? LIMIT 1), " +
+                       "(SELECT idCustomer FROM decentbuy3.Customer WHERE customerFirst = ? AND customerLast = ? LIMIT 1), " +
+                       "?, ?)";
+
+    try (PreparedStatement pstmt = dbConn.prepareStatement(insertSQL)) {
+        // Set placeholders for the main table values
+        pstmt.setInt(1, id);
+        pstmt.setString(2, date);
+        pstmt.setInt(3, quantity);
+        pstmt.setDouble(4, totalCost);
+
+        // Set placeholders for the subqueries
+        pstmt.setString(5, supplierName); // SupplierName for Supplier_idSupplier
+        pstmt.setString(6, productName); // productName for Products_idProducts
+        pstmt.setString(7, customerFirst); // customerFirst for Customer_idCustomer
+        pstmt.setString(8, customerLast); // customerLast for Customer_idCustomer
+
+        // Set placeholders for order status and type
+        pstmt.setString(9, status);
+        pstmt.setString(10, type);
+
+        // Execute the query
+        int rowsInserted = pstmt.executeUpdate();
+        if (rowsInserted > 0) {
             System.out.println("Order added successfully.");
+        } else {
+            System.out.println("Failed to add the order. Check foreign key references.");
         }
     }
+}
 
-    // Uncomment the following methods if you decide to use them in the future
-    /*
-    public JPanel createCanceledOrdersPanel(Connection dbConn) {
-        JPanel canceledPanel = new JPanel(new BorderLayout());
-        canceledOrdersTable = new JTable();
-        JScrollPane scrollPane = new JScrollPane(canceledOrdersTable);
-        canceledPanel.add(scrollPane, BorderLayout.CENTER);
-
-        JButton refreshCanceledButton = new JButton("Refresh Canceled Orders");
-        styleButton(refreshCanceledButton, primaryColor, secondaryColor);
-        refreshCanceledButton.addActionListener(e -> {
-            try {
-                DBDB_OrderData.loadCanceledOrdersData(dbConn, canceledOrdersTable);
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Refresh failed: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setBackground(Color.DARK_GRAY);
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        buttonPanel.add(refreshCanceledButton);
-        canceledPanel.add(buttonPanel, BorderLayout.SOUTH);
-
-        // Load data initially
+    public static void main(String[] args) {
         try {
-            DBDB_OrderData.loadCanceledOrdersData(dbConn, canceledOrdersTable);
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Failed to load canceled orders data: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            new DecentBuyFrame();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-
-        return canceledPanel;
     }
 
-    public JPanel createCompletedOrdersPanel(Connection dbConn) {
-        JPanel completedPanel = new JPanel(new BorderLayout());
-        completedOrdersTable = new JTable();
-        JScrollPane scrollPane = new JScrollPane(completedOrdersTable);
-        completedPanel.add(scrollPane, BorderLayout.CENTER);
-
-        JButton refreshCompletedButton = new JButton("Refresh Completed Orders");
-        styleButton(refreshCompletedButton, primaryColor, secondaryColor);
-        refreshCompletedButton.addActionListener(e -> {
-            try {
-                DBDB_OrderData.loadCompletedOrdersData(dbConn, completedOrdersTable);
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Refresh failed: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setBackground(Color.DARK_GRAY);
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        buttonPanel.add(refreshCompletedButton);
-        completedPanel.add(buttonPanel, BorderLayout.SOUTH);
-
-        // Load data initially
-        try {
-            DBDB_OrderData.loadCompletedOrdersData(dbConn, completedOrdersTable);
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Failed to load completed orders data: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-        }
-
-        return completedPanel;
-    }
-    */
-
-    /**
-     * Styles buttons with primary and hover colors.
-     */
     private void styleButton(JButton button, Color bgColor, Color hoverColor) {
         button.setBackground(bgColor);
         button.setForeground(Color.WHITE);
@@ -629,18 +619,6 @@ public class DecentBuyFrame extends JFrame {
             public void mouseExited(java.awt.event.MouseEvent evt) {
                 button.setBackground(bgColor);
                 button.setBorder(BorderFactory.createLineBorder(bgColor));
-            }
-        });
-    }
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                new DecentBuyFrame();
-            } catch (SQLException e) {
-                e.printStackTrace();
-                JOptionPane.showMessageDialog(null, "Failed to launch application: " + e.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
     }
