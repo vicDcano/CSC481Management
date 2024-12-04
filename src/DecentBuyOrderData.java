@@ -31,6 +31,7 @@ public class DecentBuyOrderData {
             System.out.println("No items available in inventory to generate an order.");
         }
 
+
         
     }
 
@@ -52,6 +53,8 @@ public class DecentBuyOrderData {
                 System.out.println("Failed to add the product.");
             }
         }
+
+
 
     }
 
@@ -226,4 +229,8 @@ public class DecentBuyOrderData {
         }
     }
 
+
 }
+
+}
+

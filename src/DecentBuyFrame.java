@@ -1,16 +1,23 @@
 import javax.swing.*;
 import javax.swing.table.*;
 
+
 import com.formdev.flatlaf.FlatDarculaLaf;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
+
+import java.awt.BorderLayout;
+
 import java.sql.*;
 import java.text.DateFormat;
 import java.time.LocalDate;
 import java.time.format.*;
+
 // import com.formdev.flatlaf.FlatDarculaLaf;
+
+
 
 
 
@@ -33,13 +40,22 @@ public class DecentBuyFrame extends JFrame{
             e.printStackTrace();
         }
 
+
+    public DecentBuyFrame() throws SQLException {
+
         Connection dbConn = Conn.getConnection();
         setTitle("DecentBuy Inventory Management");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(800, 600);
+
         setLocationRelativeTo(null);
 
     
+
+
+        
+
+
         add(createTabbedPane(dbConn));
         setVisible(true);
     }
@@ -47,10 +63,12 @@ public class DecentBuyFrame extends JFrame{
     public JTabbedPane createTabbedPane(Connection dbConn) {
         JTabbedPane tabbedPane = new JTabbedPane();
 
+
         // Customize tabbedPane appearance
         tabbedPane.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         tabbedPane.setForeground(primaryColor);
         
+
         tabbedPane.addTab("Product Inventory", createInventoryPanel(dbConn));
         tabbedPane.addTab("Orders", createOrdersPanel(dbConn));
         //tabbedPane.addTab("Cancelled Orders", createCompletedOrdersPanel(dbConn));
@@ -80,6 +98,7 @@ public class DecentBuyFrame extends JFrame{
 
     public JPanel createSearchPanel(Connection dbConn, JTable table) {
         JPanel searchPanel = new JPanel();
+
         //searchPanel.setBackground(Color.DARK_GRAY);
         searchPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
@@ -94,6 +113,12 @@ public class DecentBuyFrame extends JFrame{
 
         JButton searchButton = new JButton("Search");
         styleButton(searchButton, primaryColor, secondaryColor);
+
+        String[] searchOptions = {"idProducts", "productName", "productCategory", "productBrand", "productPrice", "productStock"};
+        JComboBox<String> searchDropdown = new JComboBox<>(searchOptions);
+        JTextField searchTextField = new JTextField(15);
+        JButton searchButton = new JButton("Search");
+
 
         searchButton.addActionListener(e -> {
 
@@ -112,6 +137,7 @@ public class DecentBuyFrame extends JFrame{
 
     public JPanel createOrderSearchPanel(Connection dbConn, JTable table) {
         JPanel searchPanel = new JPanel();
+
         searchPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         String[] searchOptions = {"idDBOrder", "Current", "Pending", "Cancelled", "Customer", "Supplier"};
@@ -125,6 +151,12 @@ public class DecentBuyFrame extends JFrame{
         
         JButton searchButton = new JButton("Search");
         styleButton(searchButton, primaryColor, secondaryColor);
+
+        String[] searchOptions = {"idDBOrder", "Current", "Pending", "Cancelled", "Customer", "Supplier"};
+        JComboBox<String> searchDropdown = new JComboBox<>(searchOptions);
+        JTextField searchTextField = new JTextField(15);
+        JButton searchButton = new JButton("Search");
+
 
         searchButton.addActionListener(e -> {
 
@@ -155,6 +187,9 @@ public class DecentBuyFrame extends JFrame{
         buttonPanel.add(refreshButton);
 
         JButton editButton = new JButton("Edit Product");
+
+        JButton editButton = new JButton("Edit Selected Row");
+
         editButton.addActionListener(e -> {
             int selectedRow = table.getSelectedRow();
             if (selectedRow == -1) {
@@ -166,6 +201,7 @@ public class DecentBuyFrame extends JFrame{
             openEditDialog(dbConn, table, selectedRow);
         });
         buttonPanel.add(editButton);
+
 
          // **Add Product Button**
         JButton addButton = new JButton("Add Product");
@@ -265,6 +301,10 @@ public class DecentBuyFrame extends JFrame{
         cancelButton.addActionListener(e -> dialog.dispose());
 
         dialog.setVisible(true);
+    }
+
+
+        return buttonPanel;
     }
 
     private void openEditDialog(Connection dbConn, JTable table, int selectedRow) {
@@ -405,7 +445,11 @@ public class DecentBuyFrame extends JFrame{
         JButton addOrderButton = new JButton("Add Order");
         addOrderButton.addActionListener(e -> {
             try {
+
                 new AddOrder();
+
+                new Add_Order_or_Product();
+
             } catch (SQLException e1) {
                 e1.printStackTrace();
             }
@@ -602,6 +646,7 @@ public class DecentBuyFrame extends JFrame{
         }
     }
 
+
     private void styleButton(JButton button, Color bgColor, Color hoverColor) {
         button.setBackground(bgColor);
         button.setForeground(Color.WHITE);
@@ -623,3 +668,6 @@ public class DecentBuyFrame extends JFrame{
         });
     }
 }
+
+}
+

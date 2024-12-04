@@ -9,6 +9,7 @@ public class DBLogin extends JFrame {
     // Database connection details
     DatabaseConn dbConn = new DatabaseConn();
 
+
     private final Color backgroundColor = new Color(40, 42, 54); // dracula bg
     private final Color primaryColor = new Color(0, 122, 204);   // Blue
     
@@ -19,10 +20,19 @@ public class DBLogin extends JFrame {
         setLayout(new BorderLayout());
         getContentPane().setBackground(backgroundColor);
 
+    public DBLogin() {
+        setTitle("Login Page");
+        setSize(400, 250);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+
         // Panel for the form
         JPanel formPanel = new JPanel();
         formPanel.setLayout(new GridBagLayout());
+
         formPanel.setBackground(backgroundColor);
+
         formPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10);
@@ -54,11 +64,14 @@ public class DBLogin extends JFrame {
 
         // Login Button
         JButton loginButton = new JButton("Login");
+
         loginButton.setBackground(primaryColor);
+
         gbc.gridx = 0;
         gbc.gridy = 2;
         gbc.gridwidth = 2;
         formPanel.add(loginButton, gbc);
+
 
         // Add hover effect
         loginButton.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -70,6 +83,7 @@ public class DBLogin extends JFrame {
                 loginButton.setBackground(primaryColor);
             }
         });
+
 
         // Status Label
         JLabel statusLabel = new JLabel("", JLabel.CENTER);
