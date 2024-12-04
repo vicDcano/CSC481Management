@@ -4,11 +4,13 @@ import com.formdev.flatlaf.FlatDarculaLaf;
 import java.awt.BorderLayout;
 import java.sql.*;
 import java.awt.Color;
+import java.awt.print.PrinterException;
 import java.awt.Font;
 import java.text.DateFormat;
 import java.time.LocalDate;
 import java.time.format.*;
 import java.util.*;
+import java.text.MessageFormat;
 
 
 @SuppressWarnings("unused")
@@ -206,6 +208,27 @@ public class DecentBuyFrame extends JFrame{
         JButton addButton = new JButton("Add Product");
         addButton.addActionListener(e -> openAddProductDialog(dbConn, table));
         buttonPanel.add(addButton);
+
+        // Print Stock Report Button
+        JButton printReportButton = new JButton("Print Stock Report");
+        styleButton(printReportButton, secondaryColor, secondaryColor);
+        printReportButton.addActionListener(e -> {
+            try {
+                boolean complete = table.print(JTable.PrintMode.FIT_WIDTH,
+                        new MessageFormat("DecentBuy Inventory - Stock Report\nDate: " + LocalDate.now()),
+                        new MessageFormat("Page - {0}"));
+
+                if (complete) {
+                    JOptionPane.showMessageDialog(this, "Printing Complete", "Print", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Printing Cancelled", "Print", JOptionPane.WARNING_MESSAGE);
+                }
+            } catch (PrinterException pe) {
+                pe.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Printing Failed: " + pe.getMessage(), "Print Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        buttonPanel.add(printReportButton);
 
         return buttonPanel;
     }
